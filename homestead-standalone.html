@@ -1,0 +1,1064 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15191c"><title>Homestead Finder</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%232f5d3a'/><path d='M60 400l130-200 70 100 60-80 132 180z' fill='%23a5d6a7'/><path d='M200 400v-90l60-50 60 50v90z' fill='%23fff'/><rect x='245' y='350' width='30' height='50' fill='%238d6e63'/><circle cx='400' cy='120' r='40' fill='%23ffd54f'/></svg>
+"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%232f5d3a'/><path d='M60 400l130-200 70 100 60-80 132 180z' fill='%23a5d6a7'/><path d='M200 400v-90l60-50 60 50v90z' fill='%23fff'/><rect x='245' y='350' width='30' height='50' fill='%238d6e63'/><circle cx='400' cy='120' r='40' fill='%23ffd54f'/></svg>
+">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:-apple-system,system-ui,sans-serif;overflow:hidden}
+#map{position:fixed;inset:0}
+#top{position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:8px;right:8px;z-index:5}
+#searchForm{display:flex;background:#fff;border-radius:12px;box-shadow:0 2px 8px #0004}
+#q{flex:1;border:0;padding:12px;font-size:16px;border-radius:12px;background:transparent}
+#searchForm button{border:0;background:none;font-size:18px;padding:0 12px}
+#results{background:#fff;border-radius:10px;margin-top:4px;max-height:40vh;overflow:auto}
+#results div{padding:10px;border-bottom:1px solid #eee}
+.row{display:flex;gap:6px;margin-top:6px}.row select{flex:1;padding:10px;font-size:15px;border-radius:10px;border:0;box-shadow:0 2px 6px #0003;background:#fff}
+#banner{position:fixed;top:calc(env(safe-area-inset-top) + 112px);left:8px;right:8px;z-index:4;background:#fff8e1;border-radius:10px;padding:10px;font-size:13px;box-shadow:0 2px 6px #0003}
+#banner a{display:inline-block;margin:4px 4px 0 0;padding:6px 9px;background:#2f5d3a;color:#fff;border-radius:8px;text-decoration:none}
+#banner .x{float:right;border:0;background:none;font-size:16px}
+#fabs{position:fixed;right:10px;bottom:calc(env(safe-area-inset-bottom) + 40px);display:flex;flex-direction:column;gap:8px;z-index:4}
+#fabs button{width:46px;height:46px;border-radius:50%;border:0;background:#fff;font-size:21px;box-shadow:0 2px 6px #0004}
+#fabs button.on{background:#cfe8d3}
+#offline{position:fixed;bottom:10px;left:10px;background:#c62828;color:#fff;padding:6px 10px;border-radius:8px;z-index:6;font-size:13px}
+.hidden{display:none!important}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:72vh;overflow:auto;background:#fff;border-radius:16px 16px 0 0;z-index:8;padding:8px 14px calc(env(safe-area-inset-bottom) + 16px);box-shadow:0 -2px 12px #0004;-webkit-overflow-scrolling:touch}
+.grab{width:40px;height:5px;background:#ccc;border-radius:3px;margin:0 auto 6px}
+#closeSheet{position:sticky;float:right;top:0;z-index:2;border:0;background:#eee;border-radius:50%;width:30px;height:30px}
+#sheet h2{margin:4px 30px 4px 0;font-size:20px}#sheet h3{font-size:15px;margin:14px 0 4px;border-top:1px solid #eee;padding-top:10px}
+.small{font-size:12px;color:#666}.src{font-size:11px;color:#888}
+.btns a,.btns button{display:inline-block;margin:3px 4px 3px 0;padding:8px 10px;background:#2f5d3a;color:#fff;border-radius:8px;text-decoration:none;border:0;font-size:14px}
+.sp{display:inline-flex;align-items:center;gap:4px;margin:2px;padding:2px 6px 2px 2px;background:#f2f2f2;border-radius:14px;font-size:12px}
+.sp img{width:26px;height:26px;border-radius:50%;object-fit:cover}.sp.game{background:#ffe0b2;font-weight:600}
+.pricepin{background:#2f5d3a;color:#fff;font-size:12px;font-weight:700;padding:3px 6px;border-radius:10px;border:2px solid #fff;box-shadow:0 1px 4px #0006;white-space:nowrap}
+.animal{width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px #0008;background-size:cover;background-position:center}
+.userpin{font-size:26px}
+#settings{position:fixed;inset:0;background:#0006;z-index:9;display:flex;align-items:flex-end}
+#settings .panel{background:#fff;width:100%;max-height:85vh;overflow:auto;padding:16px;border-radius:16px 16px 0 0}
+#settings input{width:100%;padding:10px;font-size:16px;margin-top:4px}
+#settings button{padding:10px 12px;margin:4px 2px;border-radius:8px;border:0;background:#2f5d3a;color:#fff}
+.ok{color:#2e7d32}.bad{color:#c62828}
+
+#layerbar{position:fixed;left:8px;top:calc(env(safe-area-inset-top) + 112px);z-index:4;display:flex;gap:6px}
+#layerbar button{padding:8px 12px;border-radius:18px;border:0;background:#fff;box-shadow:0 2px 6px #0004;font-size:14px;font-weight:600}
+#layerbar button.on{background:#2f5d3a;color:#fff}
+#banner{top:calc(env(safe-area-inset-top) + 156px)}
+#gameNote{position:fixed;left:8px;right:64px;top:calc(env(safe-area-inset-top) + 156px);z-index:3;background:#fffc;border-radius:10px;padding:6px 10px;font-size:12px;box-shadow:0 1px 4px #0003}
+#banner:not(.hidden)~#gameNote{top:auto;bottom:calc(env(safe-area-inset-bottom) + 100px)}
+.lpin{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.lstem{width:2px;height:8px;background:#2f5d3a}.ldot{width:10px;height:10px;border-radius:50%;background:#2f5d3a;border:2px solid #fff;box-shadow:0 1px 3px #0008}
+.gamepin{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.gimg{width:40px;height:40px;border-radius:50%;border:3px solid #ff9800;background-size:cover;background-position:center;box-shadow:0 1px 5px #0008;background-color:#ddd}
+.glab{margin-top:2px;background:#000b;color:#fff;font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.gpop img{width:100%;border-radius:6px;margin:4px 0}
+#fabs{gap:6px}#fabs button{width:42px;height:42px;font-size:18px}#btn3d{font-weight:800;font-size:15px!important}
+/* ===== dark field-app theme (hunt-map look) ===== */
+:root{--bg:#15191c;--panel:#1f2428;--line:#2e353b;--tx:#f1f3f4;--mut:#9aa4ab;--acc:#f28c28;--ok:#7cc576}
+body{font-family:-apple-system,"SF Pro Text",system-ui,sans-serif;letter-spacing:.1px}
+#searchForm{background:var(--panel);border:1px solid var(--line);border-radius:22px}
+#q{color:var(--tx);padding:10px 14px}#q::placeholder{color:var(--mut)}#searchForm button{color:var(--tx)}
+#results{background:var(--panel);color:var(--tx)}#results div{border-color:var(--line)}
+.row select{background:var(--panel);color:var(--tx);border:1px solid var(--line);padding:8px;font-size:14px;box-shadow:none}
+#fabs button{background:var(--panel);color:var(--tx);border:1px solid var(--line);box-shadow:0 2px 8px #000a}
+#fabs button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+#layerbar button{background:var(--panel);color:var(--tx);border:1px solid var(--line);box-shadow:0 2px 8px #000a;font-size:13px;letter-spacing:.3px}
+#layerbar button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+#banner{background:var(--panel);color:var(--tx);border:1px solid var(--line)}#banner .x{color:var(--tx)}
+#gameNote{background:#1f2428e6;color:var(--tx);border:1px solid var(--line)}
+#sheet{background:var(--bg);color:var(--tx)}#sheet h3{border-color:var(--line);color:var(--acc);text-transform:uppercase;font-size:13px;letter-spacing:.8px}
+#sheet input,#sheet select,#sheet textarea{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:8px}
+.small,.src{color:var(--mut)}#closeSheet{background:var(--panel);color:var(--tx)}.grab{background:#555}
+.btns a,.btns button{background:var(--acc);color:#111;font-weight:600}
+.sp{background:var(--panel);color:var(--tx)}.sp.game{background:#4a3416;color:#ffd9a8}
+#settings .panel{background:var(--bg);color:var(--tx)}#settings input{background:var(--panel);color:var(--tx);border:1px solid var(--line)}
+#settings button{background:var(--acc);color:#111}
+#tools button{background:var(--panel)!important;color:var(--tx);border:1px solid var(--line)!important}
+#tools button.on{background:var(--acc)!important;color:#111}
+#toolbar2{background:var(--panel)!important;color:var(--tx)}
+.maplibregl-popup-content{background:var(--bg);color:var(--tx);border-radius:12px}
+.maplibregl-popup-tip{border-top-color:var(--bg)!important;border-bottom-color:var(--bg)!important}
+.maplibregl-popup-close-button{color:var(--tx);font-size:18px}
+.pricepin{background:var(--acc);color:#111;border-color:#111}.lstem,.ldot{background:var(--acc)}
+.gimg{border-color:var(--acc)}.glab,.flab{background:#111d;color:#fff}
+#coords{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 50px);z-index:3;background:#111c;color:#fff;font:600 11px ui-monospace,Menlo,monospace;padding:3px 8px;border-radius:8px;pointer-events:none}
+.maplibregl-ctrl-scale{background:#111c;color:#fff;border-color:#fff}
+#layers{position:fixed;inset:0;z-index:9;background:#0007;display:flex;align-items:flex-end}
+#layers .panel{background:var(--bg);color:var(--tx);width:100%;max-height:75vh;overflow:auto;padding:14px;border-radius:16px 16px 0 0}
+#layers h4{margin:12px 0 6px;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.lgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lcard{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:6px;text-align:center;font-size:12px;color:var(--tx)}
+.lcard.on{border-color:var(--acc)}.lcard .th{height:52px;border-radius:8px;margin-bottom:4px;background-size:cover;background-position:center;font-size:26px;display:flex;align-items:center;justify-content:center}
+/* fish, shortlist, history, priorities, welcome */
+.fishpin{display:flex;flex-direction:column;align-items:center;cursor:pointer}.fimgs{display:flex}
+.fimg{width:30px;height:30px;border-radius:50%;border:2px solid #29b6f6;background-size:cover;background-position:center;margin-left:-6px;background-color:#ddd}.fimg:first-child{margin-left:0}
+.fmore{width:30px;height:30px;border-radius:50%;background:#29b6f6;color:#111;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-6px}
+.flab{margin-top:2px;font-size:10px;font-weight:600;padding:1px 5px;border-radius:8px;white-space:nowrap}
+.frow{display:flex;gap:6px;margin:6px 0}.frow img{width:54px;height:54px;border-radius:6px;object-fit:cover;margin:0}
+.slwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}#slTable{border-collapse:collapse;font-size:13px}
+#slTable th,#slTable td{border:1px solid var(--line);padding:6px;min-width:120px;text-align:left;vertical-align:top}
+#slTable .rh{position:sticky;left:0;background:var(--bg);min-width:90px;color:var(--mut);font-weight:600}
+.slctl button{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px}
+.slgo{color:var(--acc);text-decoration:underline;cursor:pointer}
+.hrow{display:flex;align-items:center;border-bottom:1px solid var(--line);padding:6px 0}.hmain{flex:1;cursor:pointer}.hs{color:var(--ok);font-weight:700}
+.hx{border:0;background:var(--panel);color:var(--tx);border-radius:50%;width:30px;height:30px;font-size:18px}
+.prow{display:grid;grid-template-columns:1fr 110px 18px;align-items:center;gap:6px;margin:4px 0;font-size:13px}.prow input{accent-color:var(--acc)}
+#welcome{position:fixed;inset:0;z-index:20;background:#000c;display:flex;align-items:center;justify-content:center;padding:16px}
+#welcome .wpanel{background:var(--bg);color:var(--tx);border-radius:16px;padding:20px;max-width:420px;border:1px solid var(--line)}
+#welcome h1{font-size:22px;margin:6px 0}#welcome button{width:100%;padding:12px;border:0;border-radius:10px;background:var(--acc);color:#111;font-weight:700;font-size:16px}
+#chips{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 196px);z-index:4;display:flex;gap:6px;overflow-x:auto;padding:2px}
+#chips button{flex:none;padding:6px 10px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--tx);font-size:12px;font-weight:600}
+#chips button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+.lpin.deal .pricepin{background:#2ecc71;border-color:#111}.lpin.deal .lstem,.lpin.deal .ldot{background:#2ecc71}
+.badge{display:inline-block;background:#2ecc71;color:#111;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;margin:2px}
+.drow{padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
+html.light{--bg:#f7f7f4;--panel:#ffffff;--line:#d9dcd6;--tx:#1b1f22;--mut:#5f6a70;--acc:#e07a12;--ok:#2e7d32}
+html.light .glab,html.light .flab{background:#fffe;color:#111;border:1px solid #0003}
+.yield{opacity:.6}.yield>*{transform:scale(.4)}.yield .glab,.yield .flab,.yield .pricepin{visibility:hidden}
+.yield .ldot,.yield .gimg,.yield .fimg{visibility:visible}
+.dim{opacity:.5}.dim>*{transform:scale(.8)}.clustered,.solohide{display:none!important}
+.cnt{position:absolute;top:-6px;right:-10px;background:#111;color:#fff;border:2px solid var(--acc);font:700 11px system-ui;border-radius:10px;padding:0 5px;min-width:18px;text-align:center}
+.lpin,.gamepin,.fishpin{position:relative}
+#legend{position:fixed;left:8px;right:64px;top:calc(env(safe-area-inset-top) + 236px);z-index:4;display:flex;gap:5px;overflow-x:auto}
+#legend button{flex:none;padding:4px 9px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--tx);font-size:11px;font-weight:600;user-select:none;-webkit-user-select:none}
+#legend button.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}#legend button.solo{background:var(--acc);color:#111}
+#legend .more{font-size:11px;color:var(--tx);background:var(--panel);border-radius:12px;padding:4px 8px;border:1px solid var(--line)}
+#home{position:fixed;inset:0;z-index:30;background:var(--bg);color:var(--tx);overflow:auto;padding:calc(env(safe-area-inset-top) + 16px) 16px 24px}
+.hwrap{max-width:480px;margin:0 auto}.hlogo{color:var(--acc);font-weight:800;letter-spacing:1px;text-transform:uppercase;font-size:13px}
+#home h1{font-size:26px;margin:8px 0}.hlead{color:var(--tx);opacity:.9;font-size:15px}
+.hcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.hcard label{display:block;margin:6px 0;font-size:13px;color:var(--mut)}.hcard select{width:100%;padding:10px;font-size:16px;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:10px;margin-top:3px}
+.hsw{display:flex!important;align-items:center;gap:8px;color:var(--tx)!important;font-size:15px!important}.hsw input{width:20px;height:20px;accent-color:var(--acc)}
+#hChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#hChips button,.hrowb button{padding:7px 11px;border-radius:16px;border:1px solid var(--line);background:var(--bg);color:var(--tx);font-size:13px}
+#hChips button.on{background:var(--acc);color:#111;border-color:var(--acc)}.hrowb{display:flex;gap:6px;flex-wrap:wrap}
+.htheme{display:block;margin:12px 0;font-size:13px;color:var(--mut)}.htheme select{padding:6px;background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:8px}
+#hOpen{width:100%;padding:16px;border:0;border-radius:14px;background:var(--acc);color:#111;font-size:18px;font-weight:800;margin-top:6px}
+/* Google-like default style */
+html.plain{--bg:#fff;--panel:#fff;--line:#dadce0;--tx:#202124;--mut:#5f6368;--acc:#1a73e8;--ok:#188038}
+html.plain.dark{--bg:#202124;--panel:#303134;--line:#5f6368;--tx:#e8eaed;--mut:#9aa0a6;--acc:#8ab4f8;--ok:#81c995}
+html.plain *{text-shadow:none!important;backdrop-filter:none!important;transition:none!important}
+html.plain body{font-family:Roboto,-apple-system,system-ui,Arial,sans-serif}
+html.plain #searchForm{border:0;border-radius:24px;box-shadow:0 1px 3px #0003,0 2px 6px #0001}
+html.plain #fabs button,html.plain #layerbar button,html.plain #legend button,html.plain #chips button{border:0;box-shadow:0 1px 3px #0003}
+html.plain #fabs button.on,html.plain #layerbar button.on,html.plain #chips button.on,html.plain .btns a,html.plain .btns button,html.plain #hOpen,html.plain #settings button,html.plain #welcome button{color:#fff}
+html.plain.dark #fabs button.on,html.plain.dark #layerbar button.on,html.plain.dark #chips button.on,html.plain.dark .btns a,html.plain.dark .btns button,html.plain.dark #hOpen,html.plain.dark #settings button{color:#202124}
+html.plain #sheet h3{color:var(--tx);text-transform:none;letter-spacing:0;font-size:15px}
+html.plain .pricepin{background:#fff;color:#202124;border:1px solid #dadce0}html.plain .lstem,html.plain .ldot{background:#ea4335}
+html.plain .lpin.deal .pricepin{background:#188038;color:#fff}html.plain .gimg{border-color:#fff}
+html.plain .hlogo{color:var(--acc)}html.plain .grab{background:#dadce0}
+
+#fileBanner{position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 96px);z-index:12;background:#fef7e0;color:#202124;border:1px solid #f9ab00;border-radius:10px;padding:10px;font-size:13px;word-break:break-word}
+#fileBanner button{border:0;background:#1a73e8;color:#fff;border-radius:6px;padding:4px 8px;margin-left:4px}
+#map.fb2d{overflow:hidden;background:#cfd8dc;touch-action:none}.fbctl{position:absolute;right:10px;top:45%;display:flex;flex-direction:column;gap:6px;z-index:2}
+.fbctl button{width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:20px;box-shadow:0 1px 3px #0004}
+.fbnote{position:absolute;left:8px;bottom:60px;background:#fffd;font-size:11px;padding:3px 6px;border-radius:6px}
+</style>
+</head><body>
+<div id="map"></div>
+<div id="top">
+ <form id="searchForm"><input id="q" type="search" placeholder="Search address or place" autocomplete="off"><button>🔍</button></form>
+ <div id="results"></div>
+ <div class="row">
+  <select id="state"><option value="">Pick a state…</option></select>
+  <select id="mode"><option value="sale">For Sale</option><option value="rent">For Rent</option><option value="rto">Rent-to-Own</option></select>
+ </div>
+</div>
+<div id="banner" class="hidden"></div>
+<div id="layerbar"><button id="btnGame">🦌 Wild Game</button><button id="btnSale">🏷️ For Sale</button><button id="btnTrails" title="Trails & backroads">🥾</button></div>
+<div id="gameNote" class="hidden"></div>
+<div id="fabs">
+ <button id="btnLayers" title="Map layers">◫</button>
+ <button id="btnSat" title="Hybrid satellite">🛰️</button>
+ <button id="btnTopo" title="USGS topo overlay">🗺️</button>
+ <button id="btnExplore" title="Explore mode">🎥</button>
+ <button id="btn3d" title="3D terrain">3D</button>
+ <button id="btnPin" title="Drop pin here">📍</button>
+ <button id="btnSettings" title="Settings">⚙️</button>
+</div>
+<div id="offline" class="hidden">Offline – showing saved data only</div>
+<div id="sheet" class="hidden"><div class="grab"></div><button id="closeSheet">✕</button><div id="sheetBody"></div></div>
+<div id="settings" class="hidden"><div class="panel">
+ <h2>Settings</h2>
+ <label>RentCast API key (for live listings)<input id="rcKey" type="password" placeholder="paste key"></label>
+ <p class="small">Free key from app.rentcast.io. Stored only on this phone. Listings are cached 24 h per area to save your quota.</p><div id="optLink"></div>
+ <div id="status"></div>
+ <button id="saveSettings">Save</button> <button id="clearCache">Clear listing cache</button> <button id="closeSettings">Close</button>
+ <h3>My pins</h3><div id="pinList"></div>
+</div></div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>window.HF_STANDALONE=1;
+'use strict';
+/* Homestead Finder – vanilla JS PWA */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const STATES=[["AL","Alabama",32.8,-86.8,6],["AK","Alaska",63.5,-150,3.5],["AZ","Arizona",34.3,-111.7,5.8],["AR","Arkansas",34.9,-92.4,6.3],["CA","California",37.2,-119.5,5],["CO","Colorado",39,-105.5,6],["CT","Connecticut",41.6,-72.7,8],["DE","Delaware",39,-75.5,8],["FL","Florida",28.6,-82.4,5.8],["GA","Georgia",32.7,-83.4,6.2],["HI","Hawaii",20.6,-157.4,6.3],["ID","Idaho",44.4,-114.6,5.5],["IL","Illinois",40,-89.2,5.8],["IN","Indiana",39.9,-86.3,6.3],["IA","Iowa",42.1,-93.5,6.3],["KS","Kansas",38.5,-98.4,6.2],["KY","Kentucky",37.5,-85.3,6.3],["LA","Louisiana",31,-92,6.3],["ME","Maine",45.3,-69.2,6.2],["MD","Maryland",39,-76.8,7.2],["MA","Massachusetts",42.3,-71.8,7.3],["MI","Michigan",44.3,-85.4,5.6],["MN","Minnesota",46.3,-94.3,5.6],["MS","Mississippi",32.7,-89.7,6.2],["MO","Missouri",38.4,-92.5,6],["MT","Montana",47,-109.6,5.5],["NE","Nebraska",41.5,-99.8,6],["NV","Nevada",39.3,-116.6,5.6],["NH","New Hampshire",43.7,-71.6,6.8],["NJ","New Jersey",40.1,-74.6,7.2],["NM","New Mexico",34.4,-106.1,5.8],["NY","New York",42.9,-75.5,6],["NC","North Carolina",35.5,-79.4,6.2],["ND","North Dakota",47.4,-100.5,6.2],["OH","Ohio",40.3,-82.8,6.4],["OK","Oklahoma",35.6,-97.5,6.2],["OR","Oregon",43.9,-120.6,5.9],["PA","Pennsylvania",40.9,-77.8,6.4],["RI","Rhode Island",41.7,-71.5,8.8],["SC","South Carolina",33.9,-80.9,6.7],["SD","South Dakota",44.4,-100.2,6.2],["TN","Tennessee",35.9,-86.4,6.3],["TX","Texas",31.5,-99.3,5],["UT","Utah",39.3,-111.7,5.9],["VT","Vermont",44,-72.7,7],["VA","Virginia",37.5,-78.8,6.4],["WA","Washington",47.4,-120.5,6.2],["WV","West Virginia",38.6,-80.6,6.7],["WI","Wisconsin",44.6,-89.9,6],["WY","Wyoming",43,-107.5,6]];
+const GAME=/\b(deer|elk|turkey|hog|pig|boar|bear|duck|mallard|teal|pheasant|quail|grouse|goose|dove|rabbit|hare|squirrel|moose|pronghorn|bighorn|sheep|javelina|peccary|woodcock|partridge|wigeon|pintail|canvasback|gadwall)\b/i;
+const COM={AU:'gold',AG:'silver',CU:'copper',PB:'lead',ZN:'zinc',FE:'iron',U:'uranium',W:'tungsten',MO:'molybdenum',F:'fluorite',SDG:'sand & gravel',STN:'stone',CLY:'clay',COL:'coal',BE:'beryllium',NB:'niobium',TA:'tantalum',MN:'manganese',GYP:'gypsum',LST:'limestone',V:'vanadium',HG:'mercury',SN:'tin',NI:'nickel',CR:'chromium',PGE:'platinum group',BA:'barium',GEM:'gemstones',MCA:'mica',FLD:'feldspar',PER:'perlite',PUM:'pumice',ZEO:'zeolites',SLT:'salt',PO4:'phosphate',OIL:'oil',GAS:'gas'};
+const STATUS={Interested:'#1e88e5',Visited:'#8e24aa',Offer:'#43a047',Rejected:'#757575'};
+
+/* ---------- storage (IndexedDB w/ localStorage fallback) ---------- */
+const DB={db:null,async open(){if(this.db)return this.db;return this.db=await new Promise((res,rej)=>{const r=indexedDB.open('homestead',3);r.onupgradeneeded=()=>{const d=r.result;['pins','drawings','cache','shortlist','history'].forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'})})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+ async tx(store,mode,fn){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction(store,mode);const s=t.objectStore(store);const out=fn(s);t.oncomplete=()=>res(out instanceof IDBRequest?out.result:out);t.onerror=()=>rej(t.error)})},
+ all(s){return this.tx(s,'readonly',st=>st.getAll())},get(s,id){return this.tx(s,'readonly',st=>st.get(id))},put(s,v){return this.tx(s,'readwrite',st=>st.put(v))},del(s,id){return this.tx(s,'readwrite',st=>st.delete(id))},clear(s){return this.tx(s,'readwrite',st=>st.clear())}};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const settings=JSON.parse(localStorage.getItem('hf-settings')||'{}');
+const saveSettings=()=>localStorage.setItem('hf-settings',JSON.stringify(settings));
+
+/* ---------- fetch helpers ---------- */
+async function getJSON(url,opt={},ms=15000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{...opt,signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
+async function getText(url,opt={},ms=15000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{...opt,signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.text()}finally{clearTimeout(t)}}
+const hav=(a,b)=>{const R=6371000,r=Math.PI/180,dl=(b[1]-a[1])*r,dn=(b[0]-a[0])*r;const h=Math.sin(dl/2)**2+Math.cos(a[1]*r)*Math.cos(b[1]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+const fmtDist=m=>`${(m*3.28084).toFixed(0)} ft · ${(m/1609.344).toFixed(2)} mi · ${m.toFixed(0)} m · ${(m/1000).toFixed(2)} km`;
+const fmtMi=m=>m<1609?`${Math.round(m*3.28084)} ft`:`${(m/1609.344).toFixed(1)} mi`;
+function areaM2(ring){const R=6378137,r=Math.PI/180;let s=0;for(let i=0;i<ring.length;i++){const p=ring[i],q=ring[(i+1)%ring.length];s+=(q[0]-p[0])*r*(2+Math.sin(p[1]*r)+Math.sin(q[1]*r))}return Math.abs(s*R*R/2)}
+const fmtArea=a=>`${(a/4046.856).toFixed(2)} acres · ${Math.round(a*10.7639).toLocaleString()} sq ft · ${(a/10000).toFixed(2)} ha`;
+const money=n=>n==null?'—':'$'+Number(n).toLocaleString();
+const short$=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1e3?'$'+Math.round(n/1e3)+'K':'$'+n;
+
+/* ---------- map ---------- */
+/* ---------- robust map init: diagnostics, WebGL check, fallbacks ---------- */
+const hfDiag=window.hfDiag={ml:(window.maplibregl&&maplibregl.getVersion&&maplibregl.getVersion())||'not loaded',protocol:location.protocol,origin:String(location.origin),ua:navigator.userAgent,gl:false,failedTiles:[],errors:[],fallback:null,styleTimeout:false,contextLost:0};
+addEventListener('error',e=>{hfDiag.errors.push(String(e.message||e).slice(0,200));hfDiag.errors=hfDiag.errors.slice(-15)});
+addEventListener('unhandledrejection',e=>{hfDiag.errors.push('promise: '+String(e.reason&&e.reason.message||e.reason).slice(0,200));hfDiag.errors=hfDiag.errors.slice(-15)});
+hfDiag.gl=(()=>{try{const c=document.createElement('canvas');return !!(c.getContext('webgl2')||c.getContext('webgl'))}catch(e){return false}})()&&!/[?&]nogl=1/.test(location.search);
+const RASTER_STYLE={version:8,glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,maxzoom:19,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]};
+function makeStub(){const s=new Proxy(function(){},{get:(t,k)=>k===Symbol.toPrimitive?()=>0:k==='then'?undefined:k==='length'?0:k===Symbol.iterator?function*(){}:s,apply:()=>s,construct:()=>s});return s}
+function fallback2D(reason){hfDiag.fallback=reason;const box=document.getElementById('map');box.innerHTML='';box.classList.add('fb2d');
+ let z=4,cx=-98.5,cy=39.5;const st=STATES.find(s=>s[0]===settings.state);if(st){cx=st[3];cy=st[2];z=7}
+ const T=256,lon2x=(l,z)=>(l+180)/360*Math.pow(2,z)*T,lat2y=(la,z)=>(1-Math.log(Math.tan(la*Math.PI/180)+1/Math.cos(la*Math.PI/180))/Math.PI)/2*Math.pow(2,z)*T;
+ const x2lon=(x,z)=>x/(Math.pow(2,z)*T)*360-180,y2lat=(y,z)=>{const n=Math.PI-2*Math.PI*y/(Math.pow(2,z)*T);return 180/Math.PI*Math.atan(.5*(Math.exp(n)-Math.exp(-n)))};
+ const draw=()=>{const W=box.clientWidth,H=box.clientHeight,px=lon2x(cx,z)-W/2,py=lat2y(cy,z)-H/2,n=Math.pow(2,z);let h='';
+  for(let tx=Math.floor(px/T);tx<=Math.floor((px+W)/T);tx++)for(let ty=Math.floor(py/T);ty<=Math.floor((py+H)/T);ty++){if(ty<0||ty>=n)continue;const wx=((tx%n)+n)%n;
+   h+=`<img src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${ty}/${wx}" style="position:absolute;left:${tx*T-px}px;top:${ty*T-py}px;width:${T}px;height:${T}px" alt="">`}
+  box.innerHTML=h+`<div class="fbctl"><button data-z="1">+</button><button data-z="-1">−</button></div><div class="fbnote">2D fallback map (${esc(reason)}). Imagery © Esri</div>`;
+  box.querySelectorAll('[data-z]').forEach(b=>b.onclick=e=>{e.stopPropagation();z=Math.max(2,Math.min(18,z+ +b.dataset.z));draw()})};
+ let d=null;box.onpointerdown=e=>{if(e.target.closest('.fbctl'))return;d={x:e.clientX,y:e.clientY,px:lon2x(cx,z),py:lat2y(cy,z)}};
+ box.onpointermove=e=>{if(!d)return;cx=x2lon(d.px-(e.clientX-d.x),z);cy=y2lat(d.py-(e.clientY-d.y),z);draw()};box.onpointerup=box.onpointercancel=()=>d=null;
+ box.ondblclick=()=>{z=Math.min(18,z+1);draw()};draw();addEventListener('resize',draw);window.hfFallbackDraw=draw}
+let map;
+if(!hfDiag.gl||!window.maplibregl){map=makeStub();window.maplibregl=window.maplibregl||{};maplibregl.Marker=maplibregl.Popup=maplibregl.NavigationControl=maplibregl.GeolocateControl=maplibregl.ScaleControl=function(){return makeStub()};maplibregl.MercatorCoordinate={fromLngLat:()=>({x:0,y:0})};maplibregl.LngLatBounds=function(){return makeStub()};maplibregl.GeoJSONSource=function(){};
+ document.addEventListener('DOMContentLoaded',()=>{});setTimeout(()=>fallback2D(!window.maplibregl.Map?'map library failed to load':'WebGL unavailable'),0)}
+else{try{map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-98.5,39.5],zoom:3.3,maxPitch:85,maxZoom:20,attributionControl:{compact:true},fadeDuration:0});}
+ catch(e){hfDiag.errors.push('Map init: '+e.message);map=makeStub();setTimeout(()=>fallback2D('map init failed: '+e.message),0)}}
+if(map&&map.on&&hfDiag.gl){
+ map.on('error',e=>{const u=e&&(e.tile&&e.tile.tileID&&e.sourceId)?e.sourceId:'';const msg=(e&&e.error&&(e.error.message||e.error.status))||'error';const url=(e&&e.error&&e.error.url)||'';
+  if(url||u){hfDiag.failedTiles.push((url||u)+' – '+msg);hfDiag.failedTiles=hfDiag.failedTiles.slice(-20)}else{hfDiag.errors.push('map: '+String(msg).slice(0,200));hfDiag.errors=hfDiag.errors.slice(-15)}});
+ setTimeout(()=>{try{if(!map.isStyleLoaded()&&!map.getLayer('osm')&&!map.getSource('openmaptiles')){hfDiag.styleTimeout=true;hfDiag.fallback='vector style timeout → raster';map.setStyle(RASTER_STYLE)}}catch(e){}},6000);
+ const cv=map.getCanvas();
+ cv.addEventListener('webglcontextlost',e=>{e.preventDefault();hfDiag.contextLost++;try{settings.terrain=false;saveSettings()}catch(_){}showMapBanner('The map\'s graphics memory was reset by the phone. 3D terrain is off to save memory. <button onclick="location.reload()">Retry</button>')},false);
+ cv.addEventListener('webglcontextrestored',()=>{try{map.setTerrain(null);map.triggerRepaint()}catch(e){}},false);
+}
+function showMapBanner(h){let b=document.getElementById('fileBanner');if(!b){b=document.createElement('div');b.id='fileBanner';document.body.appendChild(b)}b.innerHTML=h+' <button onclick="this.parentNode.remove()">✕</button>'}
+if(location.protocol==='file:')setTimeout(()=>showMapBanner('<b>Open this from the web link in Safari for the map to load.</b> Files/Quick Look previews block map tiles: https://malicev-13.github.io/homestead-finder/'),300);
+window.hfMap=map;
+map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-left');
+map.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true}),'bottom-left');
+map.addControl(new maplibregl.ScaleControl({unit:'imperial'}),'bottom-left');
+let terrainOn=false,satOn=false,topoOn=false,gameOn=settings.game===true,saleOn=settings.sale===true,exploreOn=false;
+map.on('load',()=>{
+ const firstSym=(map.getStyle().layers.find(l=>l.type==='symbol')||{}).id;
+ map.addSource('sat',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,maxzoom:19,attribution:'Imagery © Esri, Maxar, Earthstar Geographics, USDA, USGS, AeroGRID, IGN, GIS User Community'});
+ map.addLayer({id:'sat',type:'raster',source:'sat',layout:{visibility:'none'}},firstSym);
+ map.addSource('satref',{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],tileSize:256,maxzoom:19,attribution:'Labels © Esri'});
+ map.addLayer({id:'satref',type:'raster',source:'satref',layout:{visibility:'none'}},firstSym);
+ map.addSource('topo',{type:'raster',tiles:['https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}'],tileSize:256,maxzoom:16,attribution:'USGS The National Map'});
+ map.addLayer({id:'topo',type:'raster',source:'topo',layout:{visibility:'none'},paint:{'raster-opacity':0.75}},firstSym);
+ map.addSource('dem',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:15,attribution:'Terrain: Mapzen/AWS Terrain Tiles'});
+ map.addLayer({id:'hill',type:'hillshade',source:'dem',paint:{'hillshade-exaggeration':0.35}},firstSym);
+ try{map.setSky({'sky-color':'#7fb3e6','horizon-color':'#dfeefa','fog-color':'#e8eef5','sky-horizon-blend':0.5,'horizon-fog-blend':0.6,'fog-ground-blend':0.4,'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,12,0.4]})}catch(e){}
+ if(map.getLayer('building-3d'))map.setPaintProperty('building-3d','fill-extrusion-opacity',0.85);
+ map.addSource('draw',{type:'geojson',data:fc([])});
+ map.addLayer({id:'draw-fill',type:'fill',source:'draw',filter:['==','$type','Polygon'],paint:{'fill-color':['get','color'],'fill-opacity':0.25}});
+ map.addLayer({id:'draw-line',type:'line',source:'draw',paint:{'line-color':['get','color'],'line-width':3}});
+ map.addLayer({id:'draw-label',type:'symbol',source:'draw',layout:{'text-field':['get','label'],'text-size':13,'text-font':['Noto Sans Regular']},paint:{'text-halo-color':'#fff','text-halo-width':2}});
+ map.addSource('sketch',{type:'geojson',data:fc([])});
+ map.addLayer({id:'sketch-fill',type:'fill',source:'sketch',filter:['==','$type','Polygon'],paint:{'fill-color':'#ff6f00','fill-opacity':0.2}});
+ map.addLayer({id:'sketch-line',type:'line',source:'sketch',paint:{'line-color':'#ff6f00','line-width':3,'line-dasharray':[2,1]}});
+ map.addLayer({id:'sketch-pt',type:'circle',source:'sketch',filter:['==','$type','Point'],paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#ff6f00','circle-stroke-width':3}});
+ setTerrain(settings.terrain!==false);
+ loadUserData();refreshListings();updateGame();
+});
+function setTerrain(on){terrainOn=on;settings.terrain=on;saveSettings();$('#btn3d').classList.toggle('on',on);
+ try{map.setTerrain(on?{source:'dem',exaggeration:1.3}:null)}catch(e){}
+ if(on&&map.getZoom()>8&&map.getPitch()<20)map.easeTo({pitch:55})}
+$('#btn3d').onclick=()=>setTerrain(!terrainOn);
+function setSat(on){satOn=on;if(on&&typeof ensureLazy==='function')ensureLazy();['sat','satref','hf-sat-roads'].forEach(l=>map.getLayer(l)&&map.setLayoutProperty(l,'visibility',on?'visible':'none'));if(map.getLayer('building-3d'))map.setLayoutProperty('building-3d','visibility',on?'none':'visible');$('#btnSat').classList.toggle('on',on)}
+$('#btnSat').onclick=()=>setSat(!satOn);
+$('#btnTopo').onclick=()=>{topoOn=!topoOn;map.setLayoutProperty('topo','visibility',topoOn?'visible':'none');$('#btnTopo').classList.toggle('on',topoOn)};
+/* Explore: fly in tilted and orbit slowly; any touch stops it */
+let orbitRaf=null;
+function stopOrbit(){if(orbitRaf){cancelAnimationFrame(orbitRaf);orbitRaf=null}}
+function exploreTo(lon,lat){stopOrbit();map.flyTo({center:[lon,lat],zoom:Math.max(map.getZoom(),16),pitch:60,duration:2500});
+ map.once('moveend',()=>{if(!exploreOn)return;let last=performance.now();const step=t=>{map.setBearing((map.getBearing()+(t-last)*0.006)%360);last=t;orbitRaf=requestAnimationFrame(step)};orbitRaf=requestAnimationFrame(step)})}
+['touchstart','mousedown','wheel'].forEach(ev=>map.getCanvasContainer().addEventListener(ev,stopOrbit,{passive:true}));
+$('#btnExplore').onclick=()=>{exploreOn=!exploreOn;$('#btnExplore').classList.toggle('on',exploreOn);if(!exploreOn)stopOrbit();else toast('Explore on: tap a property to fly in & orbit. Touch the map to stop.')};
+const fc=f=>({type:'FeatureCollection',features:f});
+
+/* ---------- search (Photon on submit only, per usage policy) ---------- */
+$('#searchForm').onsubmit=async e=>{e.preventDefault();const q=$('#q').value.trim();if(!q)return;$('#results').innerHTML='<div>Searching…</div>';
+ try{const j=await getJSON('https://photon.komoot.io/api/?limit=6&lang=en&q='+encodeURIComponent(q));
+  $('#results').innerHTML=j.features.map((f,i)=>{const p=f.properties;return `<div data-i="${i}">${esc([p.name,p.street&&((p.housenumber||'')+' '+p.street),p.city,p.state].filter(Boolean).join(', '))}</div>`}).join('')||'<div>No results</div>';
+  $('#results').querySelectorAll('[data-i]').forEach(d=>d.onclick=()=>{const f=j.features[d.dataset.i];const [lon,lat]=f.geometry.coordinates;$('#results').innerHTML='';map.flyTo({center:[lon,lat],zoom:14});openPoint(lon,lat)});
+ }catch(err){$('#results').innerHTML='<div>Search unavailable (offline?)</div>'}};
+$('#q').addEventListener('input',()=>{if(!$('#q').value)$('#results').innerHTML=''});
+
+/* ---------- state picker & listings ---------- */
+STATES.forEach(s=>$('#state').insertAdjacentHTML('beforeend',`<option value="${s[0]}">${s[1]}</option>`));
+$('#state').value=settings.state||'';$('#mode').value=settings.mode||'sale';
+$('#state').onchange=()=>{settings.state=$('#state').value;saveSettings();const s=STATES.find(x=>x[0]===settings.state);if(s)map.flyTo({center:[s[3],s[2]],zoom:s[4],pitch:0});refreshListings()};
+$('#mode').onchange=()=>{settings.mode=$('#mode').value;saveSettings();refreshListings()};
+
+const Providers={
+ rentcast:{name:'RentCast',supports:{sale:true,rent:true,rto:false},
+  async fetchArea(mode,lat,lon,radius){const ep=mode==='sale'?'listings/sale':'listings/rental/long-term';
+   const j=await getJSON(`https://api.rentcast.io/v1/${ep}?latitude=${lat}&longitude=${lon}&radius=${radius}&status=Active&limit=500`,{headers:{'X-Api-Key':settings.rcKey,Accept:'application/json'}},20000);
+   return (Array.isArray(j)?j:[]).filter(l=>l.latitude&&l.longitude);},
+  async fetch(mode,state){const ep=mode==='sale'?'listings/sale':'listings/rental/long-term';
+   const u=`https://api.rentcast.io/v1/${ep}?state=${state}&status=Active&limit=200`;
+   const j=await getJSON(u,{headers:{'X-Api-Key':settings.rcKey,Accept:'application/json'}},20000);
+   return (Array.isArray(j)?j:[]).filter(l=>l.latitude&&l.longitude);}}
+};
+let listingMarkers=[],saleTimer=null,saleReq=0;
+$('#btnSale').classList.toggle('on',saleOn);function saleVis(){$('#btnSale').classList.toggle('hidden',!settings.rcKey);if(typeof renderChips==='function'&&document.getElementById('chips'))renderChips()}saleVis();
+$('#btnSale').onclick=()=>{saleOn=!saleOn;settings.sale=saleOn;saveSettings();$('#btnSale').classList.toggle('on',saleOn);refreshListings()};
+map.on('moveend',()=>{clearTimeout(saleTimer);saleTimer=setTimeout(()=>refreshListings(),800)});
+function keyPrompt(mode){const ban=$('#banner');
+ ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>`+(mode==='rto'?`<b>Rent-to-own:</b> no listing provider offers a reliable rent-to-own feed, so no live pins are shown. Switch to For Sale or For Rent.`:
+ `<b>Live For-Sale pins need a free RentCast API key.</b> Create one at app.rentcast.io (free tier ≈ 50 calls/month), then paste it here. It's stored only on this phone; listings are cached 24 h to save quota.<div style="display:flex;gap:6px;margin-top:6px"><input id="bannerKey" type="password" placeholder="paste RentCast key" style="flex:1;padding:8px;font-size:16px"><button id="bannerKeySave" style="border:0;background:#2f5d3a;color:#fff;border-radius:8px;padding:0 12px">Save</button></div>`);
+ ban.classList.remove('hidden');const b=$('#bannerKeySave');if(b)b.onclick=()=>{const v=$('#bannerKey').value.trim();if(!v)return;settings.rcKey=v;saveSettings();saleVis();refreshListings(true)}}
+async function refreshListings(force){
+ const mode=settings.mode||'sale';const ban=$('#banner');const id=++saleReq;
+ const clear=()=>{saleList=[];syncMarkers(listingMk,new Map());listingMarkers=[];renderChips()};
+ if(!saleOn){clear();if(ban.dataset.k==='sale')ban.classList.add('hidden');return}
+ ban.dataset.k='sale';
+ if(!settings.rcKey){clear();ban.classList.add('hidden');return}
+ if(mode==='rto'){clear();keyPrompt(mode);return}
+ if(map.getZoom()<8){ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>Zoom in closer (county level) to load listing pins for this area.`;ban.classList.remove('hidden');return}
+ const c=map.getCenter(),b=map.getBounds();const radius=Math.min(50,Math.max(1,hav([c.lng,c.lat],[b.getEast(),b.getNorth()])/1609.344));
+ const rr=radius<5?0.02:0.1;const lat=(Math.round(c.lat/rr)*rr).toFixed(2),lon=(Math.round(c.lng/rr)*rr).toFixed(2),rad=Math.ceil(radius);
+ const key=`rcv-${mode}-${lat}-${lon}-${rad}`;let rec=null;try{rec=await DB.get('cache',key)}catch(e){}
+ let list=rec&&rec.data,note='';
+ if(force||!rec||Date.now()-rec.t>864e5){
+  if(navigator.onLine){try{list=await Providers.rentcast.fetchArea(mode,lat,lon,rad);await DB.put('cache',{id:key,t:Date.now(),data:list}).catch(()=>{});note='Fresh from RentCast'}catch(e){note=`RentCast error (${esc(e.message)}). `+(rec?'Showing cached data.':'')}}
+  else note='Offline – showing cached listings';
+ } else note=`Cached ${new Date(rec.t).toLocaleString()} (refreshes daily)`;
+ if(id!==saleReq)return;list=list||[];
+ ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>${list.length?list.length+' live '+(mode==='sale'?'for-sale':'rental')+' listings here':'No active '+(mode==='sale'?'for-sale':'rental')+' listings returned by RentCast for this area'} · ${note}`;ban.classList.remove('hidden');
+ saleList=list;renderSalePins();
+}
+function searchLinks(name,mode){const slug=encodeURIComponent(name.replace(/ /g,'-'));return `<a href="https://www.zillow.com/homes/${mode==='rent'?'for_rent':'for_sale'}/${slug}_rb/" target="_blank" class="small">Optional: open Zillow search for ${esc(name)}</a>`}
+
+/* ---------- bottom sheet / point info ---------- */
+function showSheet(html){$('#sheetBody').innerHTML=html;$('#sheet').classList.remove('hidden');$('#sheet').scrollTop=0}
+$('#closeSheet').onclick=()=>$('#sheet').classList.add('hidden');
+const sec=(id,title)=>`<h3>${title}</h3><div id="${id}"><span class="small">Loading…</span></div>`;
+const set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h};
+const fail=(id,src)=>set(id,`<span class="small">Unknown – couldn't reach ${src} (offline or service busy).</span>`);
+let sheetToken=0;
+function openPoint(lon,lat,listing,pin){
+ const tok=++sheetToken;const L=listing||{};curCtx={lon,lat,name:pin?pin.name:listing?(L.formattedAddress||'Listing'):`Spot ${lat.toFixed(4)},${lon.toFixed(4)}`,price:listing?L.price:null,acres:listing&&L.lotSize?L.lotSize/43560:null,listing:listing||null};recordHistory(lon,lat,curCtx.name,listing||null);if(exploreOn)exploreTo(lon,lat);
+ const title=pin?esc(pin.name):listing?money(L.price)+(settings.mode==='rent'?'/mo':''):'Dropped point';
+ let facts='';
+ if(listing)facts=`<div>${esc(L.formattedAddress)}</div><div>${[L.propertyType,L.bedrooms!=null&&L.bedrooms+' bd',L.bathrooms!=null&&L.bathrooms+' ba',L.squareFootage&&L.squareFootage.toLocaleString()+' sq ft',L.lotSize&&('lot '+(L.lotSize/43560).toFixed(2)+' ac / '+L.lotSize.toLocaleString()+' sq ft'),L.yearBuilt&&'built '+L.yearBuilt].filter(Boolean).join(' · ')}</div><div class="src">Listing via RentCast${L.mlsName?' / '+esc(L.mlsName):''}${L.daysOnMarket!=null?' · '+L.daysOnMarket+' days on market':''}</div><div><span class="badge">${PTYPES[classify(L)]} ${classify(L)}</span></div><h3>💰 Deal</h3>${dealHTML(L)}`;
+ if(pin)facts=`<div><b style="color:${STATUS[pin.status]}">● ${esc(pin.status)}</b></div><div>${esc(pin.notes||'')}</div>${pin.link?`<a href="${esc(pin.link)}" target="_blank">Listing link</a>`:''}`;
+ const ll=`${lat.toFixed(5)},${lon.toFixed(5)}`;
+ showSheet(`<h2>${title}</h2>${facts}<div class="small">${ll} <span id="addr"></span></div>
+ <div class="btns">${listing?'':`<a href="https://maps.apple.com/?daddr=${ll}" target="_blank">Apple Maps</a>`}<button id="repBtn" data-lon="${lon}" data-lat="${lat}">🏕 Getaway Report</button>${slButton()}${pin?`<button id="editPin">Edit pin</button>`:`<button id="savePin">Save pin</button>`}</div>
+ ${sec('elev','Elevation & slope')}${sec('soil','Soil')}${sec('util','Utilities & buildability')}${sec('wild','Wildlife nearby')}${sec('water','💧 Water')}${sec('fish','Fish nearby')}${sec('min','Mineral deposits')}
+ <p class="small">Wildlife & fish are community <b>observations, not guarantees</b>. Utility/zoning items are estimates – verify with the utility and county.</p>`);
+ if(listing)wireDeal(L);
+ if(pin)$('#editPin').onclick=()=>pinDialog(pin);else $('#savePin').onclick=()=>pinDialog({id:uid(),lon,lat,name:listing?L.formattedAddress:'My spot',status:'Interested',notes:'',link:''});
+ const live=f=>(...a)=>{if(tok===sheetToken)f(...a)};
+ if(!navigator.onLine){['elev','soil','util','wild','water','fish','min'].forEach(i=>set(i,'<span class="small">Offline – unknown until you reconnect.</span>'));return}
+ loadElev(lon,lat,live(set)).catch(()=>live(fail)('elev','USGS EPQS'));
+ loadSoil(lon,lat).then(live(h=>set('soil',h))).catch(()=>live(fail)('soil','USDA Soil Data Access'));
+ loadUtil(lon,lat,L,live).catch(()=>live(fail)('util','OpenStreetMap'));
+ loadWild(lon,lat).then(live(h=>set('wild',h))).catch(()=>live(fail)('wild','iNaturalist'));
+ loadWater(lon,lat).then(live(W=>set('water',waterHTML(W,settings.state)))).catch(()=>live(fail)('water','OSM/USGS'));
+ loadFish(lon,lat).then(live(h=>set('fish',h))).catch(()=>live(fail)('fish','iNaturalist/OSM'));
+ loadMin(lon,lat).then(live(h=>set('min',h))).catch(()=>live(fail)('min','USGS MRDS'));
+}
+async function epqs(lon,lat){const j=await getJSON(`https://epqs.nationalmap.gov/v1/json?x=${lon}&y=${lat}&units=Feet&wkid=4326&includeDate=false`);const v=parseFloat(j.value);if(isNaN(v)||v<-1e5)throw new Error('no value');return v}
+async function loadElev(lon,lat,setter){
+ const ft=await epqs(lon,lat).catch(()=>null);
+ // slope from DEM (map terrain), sampled ±60 m
+ const d=60,dLat=d/111320,dLon=d/(111320*Math.cos(lat*Math.PI/180));
+ const q=(x,y)=>{try{return map.queryTerrainElevation([x,y],{exaggerated:false})}catch(e){return null}};
+ let e=[q(lon+dLon,lat),q(lon-dLon,lat),q(lon,lat+dLat),q(lon,lat-dLat)];let src='AWS Terrain Tiles DEM';
+ if(e.some(v=>v==null)){src='USGS EPQS (4 samples)';e=(await Promise.all([[lon+dLon,lat],[lon-dLon,lat],[lon,lat+dLat],[lon,lat-dLat]].map(p=>epqs(p[0],p[1]).then(v=>v/3.28084).catch(()=>null))))}
+ let slope='unknown';if(e.every(v=>v!=null)){const gx=(e[0]-e[1])/(2*d),gy=(e[2]-e[3])/(2*d);const pct=Math.hypot(gx,gy)*100;
+  slope=`${pct.toFixed(1)}% (${(Math.atan(pct/100)*180/Math.PI).toFixed(1)}°) – ${pct<3?'flat, easy to build/farm':pct<8?'gentle':pct<15?'moderate, may need grading':pct<30?'steep':'very steep'}`}
+ setter('elev',`<div><b>${ft!=null?Math.round(ft).toLocaleString()+' ft':'unknown'}</b>${ft!=null?' ('+Math.round(ft/3.28084)+' m)':''}</div><div>Slope: ${slope}</div><div class="src">Elevation: USGS 3DEP Elevation Point Query Service · Slope: ${src}, ~120 m window</div>`)}
+async function loadSoil(lon,lat){
+ const sql=`SELECT TOP 4 mu.muname, c.compname, c.comppct_r, c.taxorder, c.drainagecl, c.hydgrp, c.slope_r FROM mapunit mu INNER JOIN component c ON c.mukey=mu.mukey WHERE mu.mukey IN (SELECT * FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('point(${lon} ${lat})')) ORDER BY c.comppct_r DESC`;
+ const j=await getJSON('https://sdmdataaccess.sc.egov.usda.gov/Tabular/post.rest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:sql,format:'JSON+COLUMNNAME'})},20000);
+ const rows=(j.Table||[]).slice(1);if(!rows.length)return '<span class="small">Unknown – no soil survey data here (e.g. outside US or unmapped).</span><div class="src">USDA NRCS Soil Data Access</div>';
+ return `<div><b>${esc(rows[0][0])}</b></div>`+rows.map(r=>`<div class="small">${esc(r[1])} ${r[2]||'?'}% · ${esc(r[3]||'')} · drainage: ${esc(r[4]||'unknown')} · hydro group ${esc(r[5]||'?')}</div>`).join('')+'<div class="src">USDA NRCS SSURGO via Soil Data Access</div>'}
+async function overpass(q){const body='data='+encodeURIComponent(`[out:json][timeout:25];${q}`);
+ for(const u of['https://overpass-api.de/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.private.coffee/api/interpreter']){try{if(u!==arguments[1])await new Promise(r=>setTimeout(r,0));return await getJSON(u,{method:'POST',body,headers:{'Content-Type':'application/x-www-form-urlencoded'}},25000)}catch(e){}}throw new Error('overpass')}
+const elPt=e=>e.center?[e.center.lon,e.center.lat]:e.lon!=null?[e.lon,e.lat]:e.geometry?nearestOnLine(e.geometry):null;
+let _ref=null;function nearestOnLine(g){let best=null,bd=1e12;g.forEach(p=>{const d=hav(_ref,[p.lon,p.lat]);if(d<bd){bd=d;best=[p.lon,p.lat]}});return best}
+async function loadUtil(lon,lat,L,live){
+ _ref=[lon,lat];
+ const [ov,rev,wells]=await Promise.all([
+  overpass(`(way["power"~"^(line|minor_line)$"](around:3000,${lat},${lon});node["power"="substation"](around:15000,${lat},${lon});way["power"="substation"](around:15000,${lat},${lon});way["building"](around:150,${lat},${lon}););out geom center 300;`).catch(()=>null),
+  getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`).catch(()=>null),
+  getText(`https://waterservices.usgs.gov/nwis/site/?format=rdb&siteType=GW&siteStatus=all&bBox=${(lon-.05).toFixed(4)},${(lat-.04).toFixed(4)},${(lon+.05).toFixed(4)},${(lat+.04).toFixed(4)}`).catch(e=>e.message.includes('404')?'':null)]);
+ const els=ov?ov.elements:[];
+ const near=(f)=>{let b=null;els.filter(f).forEach(e=>{const p=e.geometry&&e.type==='way'&&!e.tags.building&&e.tags.power!=='substation'?nearestOnLine(e.geometry):elPt(e);if(!p)return;const d=hav([lon,lat],p);if(!b||d<b.d)b={d,e}});return b};
+ const line=near(e=>/line/.test(e.tags&&e.tags.power||'')),sub=near(e=>e.tags&&e.tags.power==='substation');
+ const bld=els.filter(e=>e.tags&&e.tags.building);
+ const a=(rev&&rev.address)||{};const county=a.county||a.city||a.town||'';const stName=a.state||'';
+ let elec=ov?`<div>Nearest power line: ${line?fmtMi(line.d)+(line.e.tags.voltage?' ('+esc(line.e.tags.voltage)+' V)':'')+(line.e.tags.operator?' · '+esc(line.e.tags.operator):''):'none mapped within ~2 mi'}</div><div>Nearest substation: ${sub?fmtMi(sub.d)+(sub.e.tags.operator?' · '+esc(sub.e.tags.operator):''):'none mapped within ~9 mi'}</div>`:'<div>Power lines: unknown (OSM unreachable)</div>';
+ const prov=(line&&line.e.tags.operator)||(sub&&sub.e.tags.operator);
+ elec+=`<div class="small">Utility provider: ${prov?esc(prov)+' (operator tag on nearby line – may be transmission owner, not your retail provider)':'unknown'}. <b>Estimate – verify with the utility.</b> Small distribution lines are often unmapped.</div><div class="src">OpenStreetMap power=* via Overpass${L.features?' · listing features':''}</div>`;
+ let wl='unknown';if(wells===''){wl='No USGS groundwater sites mapped within ~3 mi'}else if(wells){const rows=wells.split('\n').filter(r=>r&&!r.startsWith('#'));const data=rows.slice(2).map(r=>r.split('\t'));
+  if(data.length){const w=data.map(c=>({name:c[2],d:hav([lon,lat],[+c[5],+c[4]])})).filter(w=>!isNaN(w.d)).sort((x,y)=>x.d-y.d);wl=`${data.length} USGS groundwater/well sites within ~3 mi; nearest: ${esc(w[0]?.name)} (${fmtMi(w[0]?.d)})`}else wl='No USGS groundwater sites mapped within ~3 mi'}
+ const lf=L.features||{};const listed=[lf.waterSource&&'Water: '+lf.waterSource,lf.sewer&&'Sewer/septic: '+lf.sewer,lf.heating&&'Heating: '+lf.heating].filter(Boolean).join(' · ');
+ const zq=encodeURIComponent(`${county} ${stName} zoning map GIS`),pq=encodeURIComponent(`${county} ${stName} planning and zoning department`);
+ live(set)('util',`<b>⚡ Electricity</b>${elec}
+ <b>🏠 Existing buildings</b><div>${L.squareFootage||L.propertyType?`Listing: ${esc(L.propertyType||'')} ${L.squareFootage?L.squareFootage.toLocaleString()+' sq ft':''} <span class="src">(RentCast)</span>`:'Listing data: unknown'}</div><div>${ov?`${bld.length} building footprint(s) mapped in OSM within 150 m`:'OSM footprints: unknown'} – check 🛰️ satellite view to confirm.</div><div class="src">OpenStreetMap building=*; imagery Esri</div>
+ <b>💧 Wells & water</b><div>${listed?esc(listed)+' <span class="src">(listing)</span>':'Listing water/septic info: unknown'}</div><div>${wl}</div><div class="src">USGS NWIS groundwater sites. Private well logs are kept by state agencies – search “${esc(stName)} well log database”.</div>
+ <b>📋 Zoning & permits</b><div>${L.zoning?'Listing zoning: '+esc(L.zoning):'Zoning: <b>unknown</b> – there is no free national zoning dataset. Check the county:'}</div>
+ <div class="btns"><a target="_blank" href="https://www.google.com/search?q=${zq}">${esc(county||'County')} zoning/GIS map</a><a target="_blank" href="https://www.google.com/search?q=${pq}">Planning dept.</a></div><div class="src">County from OpenStreetMap Nominatim reverse geocode</div>`);
+ if(rev&&rev.display_name)live(set)('addr',' · '+esc(rev.display_name));
+}
+async function inat(path,params){const q=new URLSearchParams(params).toString();return getJSON(`https://api.inaturalist.org/v1/${path}?${q}`)}
+const isGame=n=>GAME.test(n)&&!/vulture|buzzard/i.test(n);
+const chip=t=>{const n=t.preferred_common_name||t.name;const ph=t.default_photo&&t.default_photo.square_url;const g=isGame(n);return `<span class="sp${g?' game':''}" title="${esc(t.name)}">${ph?`<img loading="lazy" src="${esc(ph)}" alt="">`:''}${g?'🎯 ':''}${esc(n)}</span>`};
+async function loadWild(lon,lat){
+ const j=await inat('observations/species_counts',{lat,lng:lon,radius:10,quality_grade:'research',per_page:120,iconic_taxa:'Mammalia,Aves,Reptilia,Amphibia,Insecta,Arachnida'});
+ const groups={Mammalia:'🦌 Mammals',Aves:'🐦 Birds',Reptilia:'🐍 Reptiles',Amphibia:'🐸 Amphibians',Insecta:'🐝 Insects',Arachnida:'🕷 Spiders'};const by={};
+ j.results.forEach(r=>{(by[r.taxon.iconic_taxon_name]=by[r.taxon.iconic_taxon_name]||[]).push(r.taxon)});
+ const game=j.results.filter(r=>isGame(r.taxon.preferred_common_name||'')).map(r=>r.taxon);
+ if(!j.results.length)return '<span class="small">No research-grade observations within 10 km.</span>';
+ return (game.length?`<div><b>Game species seen:</b> ${game.map(chip).join('')}</div>`:'<div class="small">No common game species recorded nearby.</div>')+Object.keys(groups).filter(k=>by[k]).map(k=>`<div><b>${groups[k]}</b> (${by[k].length})<br>${by[k].slice(0,18).map(chip).join('')}</div>`).join('')+'<div class="src">iNaturalist research-grade observations, 10 km radius. Photos © observers (CC licences on iNaturalist).</div>'}
+async function loadFish(lon,lat){
+ _ref=[lon,lat];
+ const [j,ov]=await Promise.all([inat('observations/species_counts',{lat,lng:lon,radius:15,quality_grade:'research',per_page:40,taxon_id:47178}).catch(()=>null),
+  overpass(`(way["natural"="water"]["name"](around:8000,${lat},${lon});relation["natural"="water"]["name"](around:8000,${lat},${lon});way["waterway"~"^(river|stream)$"]["name"](around:8000,${lat},${lon}););out geom center 80;`).catch(()=>null)]);
+ let w='Nearest named water: unknown';
+ if(ov){let b=null;ov.elements.forEach(e=>{const p=e.geometry?nearestOnLine(e.geometry):elPt(e);if(!p)return;const d=hav([lon,lat],p);if(!b||d<b.d)b={d,e}});w=b?`Nearest named water: <b>${esc(b.e.tags.name)}</b> (${esc(b.e.tags.waterway||b.e.tags.water||'water')}) – ${fmtMi(b.d)}`:'No named water body within 5 mi (OSM)'}
+ const fish=j?j.results.map(r=>r.taxon):null;
+ return `<div>${w}</div><div>${fish==null?'Fish: unknown':fish.length?fish.map(chip).join(''):'No fish observations within 15 km.'}</div><div class="src">iNaturalist (Actinopterygii) · water bodies © OpenStreetMap via Overpass</div>`}
+async function loadMin(lon,lat){
+ const b=[lon-.15,lat-.12,lon+.15,lat+.12].map(v=>v.toFixed(3)).join(',');
+ const t=await getText(`https://mrdata.usgs.gov/services/wfs/mrds?service=WFS&version=1.0.0&request=GetFeature&typeName=mrds&maxFeatures=40&bbox=${b}`,{},20000);
+ const doc=new DOMParser().parseFromString(t,'text/xml');const fm=[...doc.getElementsByTagNameNS('*','featureMember')];
+ const g=(n,k)=>{const e=n.getElementsByTagNameNS('*',k)[0];return e?e.textContent:''};
+ const items=fm.map(f=>{const c=(g(f,'coordinates')||'').trim().split(/[\s,]+/).map(Number);return{name:g(f,'site_name'),com:(g(f,'commod1')||g(f,'code_list')).trim().split(/\s+/).map(x=>COM[x]||x).join(', '),dev:g(f,'dev_stat'),d:c.length>1?hav([lon,lat],[c[0],c[1]]):null}}).sort((a,b)=>(a.d??1e9)-(b.d??1e9));
+ const link=`<a target="_blank" href="https://mrdata.usgs.gov/mrds/map-us.html#home">USGS MRDS map</a>`;
+ if(!items.length)return `<span class="small">No MRDS records within ~10 mi.</span> ${link}<div class="src">USGS Mineral Resources Data System</div>`;
+ return items.slice(0,10).map(i=>`<div class="small">⛏ <b>${esc(i.name||'unnamed')}</b> – ${esc(i.com||'?')} ${i.dev?'('+esc(i.dev)+')':''} ${i.d!=null?'· '+fmtMi(i.d):''}</div>`).join('')+`${link}<div class="src">USGS Mineral Resources Data System (historic records; may be outdated)</div>`}
+
+/* ---------- Wild Game layer: iNaturalist research-grade obs, curated game taxa only ---------- */
+// Taxon IDs verified against api.inaturalist.org/v1/taxa (Oct 2026)
+const GAME_TAXA={42223:'White-tailed Deer',42220:'Mule Deer',204114:'Elk',522193:'Moose',42429:'Pronghorn',41638:'Black Bear',906:'Wild Turkey',
+ 6922:'Mallards & dabbling ducks',558404:'Shovelers & teal',487319:'Wigeons & gadwall',7043:'Scaup & diving ducks',7105:'Wood Duck',6989:'Goldeneyes & Bufflehead',7031:'Scoters',6995:'Mergansers',7108:'Hooded Merganser',7169:'Long-tailed Duck',7073:'Ruddy Duck',
+ 7089:'Canada Goose',558426:'Snow Goose',981:'Ring-necked Pheasant',1280:'Northern Bobwhite',1409:'California Quail',1406:"Gambel's Quail",
+ 890:'Ruffed Grouse',1240:'Blue/Dusky Grouse',1289698:'Spruce Grouse',1263:'Sage-Grouse',1065:'Prairie-chicken & Sharp-tailed Grouse',3454:'Mourning Dove',
+ 42134:'Wild Boar / Feral Hog',43095:'Rabbits & Hares',45994:'Tree Squirrels',42391:'Bighorn Sheep',42414:'Mountain Goat',42113:'Javelina',42051:'Coyote'};
+const GAME_IDS=Object.keys(GAME_TAXA).map(Number);
+const gameGroup=t=>{if(!t)return null;const ids=[t.id,...(t.ancestor_ids||[])];return GAME_IDS.find(g=>ids.includes(g))||null};
+let gameMarkers=[],gameTimer=null,gameReq=0;
+$('#btnGame').classList.toggle('on',gameOn);
+$('#btnGame').onclick=()=>{gameOn=!gameOn;settings.game=gameOn;saveSettings();$('#btnGame').classList.toggle('on',gameOn);updateGame()};
+map.on('moveend',()=>{clearTimeout(gameTimer);gameTimer=setTimeout(updateGame,400)});
+function gameNote(h){const n=$('#gameNote');n.innerHTML=h;n.classList.toggle('hidden',!h)}
+/* ---- stable, diff-updated marker layers (no clear/recreate on move) ---- */
+window.__mops=0; // marker add/remove counter (tests)
+const gameObs=new Map(),fishObs=new Map(),gameCounts=new Map();let fetchedBoxes=[];const gameMk=new Map(),fishMk=new Map(),snapCache=new Map();
+const boxInside=(b,f)=>b.w>=f.w&&b.e<=f.e&&b.s>=f.s&&b.n<=f.n;
+function viewBox(pad=0){const b=map.getBounds();const dw=(b.getEast()-b.getWest())*pad,dh=(b.getNorth()-b.getSouth())*pad;return{w:b.getWest()-dw,e:b.getEast()+dw,s:b.getSouth()-dh,n:b.getNorth()+dh}}
+const inBox=(c,b)=>c[0]>=b.w&&c[0]<=b.e&&c[1]>=b.s&&c[1]<=b.n;
+function syncMarkers(store,want,make){ // want: Map key->{ll,html,sig,build}
+ want.forEach((w,k)=>{const m=store.get(k);if(m&&m.__sig===w.sig)return;const nm=make(w);nm.__sig=w.sig;store.set(k,nm);window.__mops++;if(m){m.remove();window.__mops++}});
+ store.forEach((m,k)=>{if(!want.has(k)){m.remove();store.delete(k);window.__mops++}})}
+function gameNoteFor(n,nf){gameNote(n||nf?`🦌 ${n} game species group${n==1?'':'s'}${nf?` · 🎣 fish on ${nf} water bod${nf==1?'y':'ies'}`:''} in view`:'No verified game observations recorded here yet')}
+async function updateGame(){
+ if(!gameOn){syncMarkers(gameMk,new Map());syncMarkers(fishMk,new Map());gameMarkers=[];fishMarkers=[];gameNote('');return}
+ if(map.getZoom()<8){gameNote('Zoom in to see verified game observations');return} // keep existing icons; no clearing
+ const vb=viewBox(0);
+ if(navigator.onLine&&!fetchedBoxes.some(f=>boxInside(vb,f)&&(f.fish||map.getZoom()<10))){const fb=viewBox(0.5);const id=++gameReq;gameNote('Loading verified game observations…');
+  const bb={swlat:fb.s.toFixed(4),swlng:fb.w.toFixed(4),nelat:fb.n.toFixed(4),nelng:fb.e.toFixed(4),quality_grade:'research',photos:true};
+  try{const reqs=[inat('observations',{...bb,taxon_id:GAME_IDS.join(','),order_by:'observed_on',order:'desc',per_page:200}),inat('observations/species_counts',{...bb,taxon_id:GAME_IDS.join(','),per_page:200})];
+   if(map.getZoom()>=10)reqs.push(inat('observations',{...bb,taxon_id:FISH_IDS.join(','),order_by:'observed_on',order:'desc',per_page:200}));
+   const [obs,sc,fo]=await Promise.all(reqs);
+   (obs.results||[]).forEach(o=>{if(o.geojson&&gameGroup(o.taxon))gameObs.set(o.id,o)});(fo&&fo.results||[]).forEach(o=>{if(o.geojson&&fishGroup(o.taxon))fishObs.set(o.id,o)});
+   (sc.results||[]).forEach(r=>{const g=gameGroup(r.taxon);if(!g)return;const c=gameCounts.get(g)||{n:0,photo:null,species:new Set()};c.n=Math.max(c.n,r.count);c.photo=c.photo||r.taxon.default_photo;c.species.add(r.taxon.preferred_common_name||r.taxon.name);gameCounts.set(g,c)});
+   fetchedBoxes.push({...fb,fish:map.getZoom()>=10});if(fetchedBoxes.length>30)fetchedBoxes.shift();
+   // evict far-away observations past a cap
+   const far=viewBox(3);[gameObs,fishObs].forEach(M=>{if(M.size>3000)[...M].forEach(([k,o])=>{if(!inBox(o.geojson.coordinates,far))M.delete(k)})});
+  }catch(e){if(id===gameReq&&!gameMk.size)gameNote('Game layer: iNaturalist unreachable – try again')}}
+ renderGame()}
+function renderGame(){if(!gameOn)return;if(map.isMoving()){return}const z=Math.floor(map.getZoom());const cell=360/Math.pow(2,z)*0.9;const area=viewBox(0.6),vis=viewBox(0);const want=new Map();const groups=new Map();
+ if(settings.landGame!==false)gameObs.forEach(o=>{const c=o.geojson.coordinates;if(!inBox(c,area))return;const g=gameGroup(o.taxon);const k=g+'|'+z+'|'+Math.floor(c[0]/cell)+'|'+Math.floor(c[1]/cell);
+  const e=want.get(k)||{g,o,n:0};e.n++;if((o.observed_on||'')>(e.o.observed_on||''))e.o=o;want.set(k,e);if(inBox(c,vis)){const G=groups.get(g)||{n:0,latest:o};G.n++;if((o.observed_on||'')>(G.latest.observed_on||''))G.latest=o;groups.set(g,G)}});
+ const W=new Map();want.forEach((e,k)=>{const G=groups.get(e.g)||{n:e.n,latest:e.o};const C=gameCounts.get(e.g);const name=GAME_TAXA[e.g];const ph=(C&&C.photo&&(C.photo.square_url||C.photo.url))||e.o.photos?.[0]?.url||'';
+  const L=G.latest,obsr=L.user?(L.user.name||L.user.login):'unknown observer',credit=(C&&C.photo&&C.photo.attribution)||L.photos?.[0]?.attribution||'';const count=G.n;
+  const sp=C?[...C.species]:[];
+  const html=`<div class="gpop"><b>${esc(name)}</b>${sp.length>1?`<div class="small">${esc(sp.slice(0,4).join(', '))}</div>`:''}<img src="${esc(ph.replace('square','medium'))}" alt=""><div><b>${count}</b> verified observation${count==1?'':'s'} in view</div><div>Most recent: ${esc(L.observed_on||'unknown date')}</div><div class="src">Observed by ${esc(obsr)} · Photo ${esc(credit)} · iNaturalist research grade</div></div>`;
+  W.set(k,{ll:e.o.geojson.coordinates,sig:name+e.n+ph,html,inner:`<div class="gimg" style="background-image:url('${esc(ph)}')"></div><div class="glab">${esc(name)}${e.n>1?' ·'+e.n:''}</div>`})});
+ syncMarkers(gameMk,W,w=>{const el=document.createElement('div');el.className='gamepin';el.innerHTML=w.inner;const pop=new maplibregl.Popup({offset:24,maxWidth:'250px'}).setHTML(w.html);const mk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(w.ll).setPopup(pop).addTo(map);el.addEventListener('click',ev=>{ev.stopPropagation();pop.setHTML(mk.__html||w.html);if(!pop.isOpen())pop.setLngLat(mk.getLngLat()).addTo(map)});return mk});
+ W.forEach((w,k)=>{const m=gameMk.get(k);if(m)m.__html=w.html});gameMarkers=[...gameMk.values()];
+ const nf=renderFish();gameNoteFor(groups.size,nf);scheduleDeclutter()}
+addEventListener('online',()=>updateGame());
+
+/* ---------- user pins ---------- */
+let pins=[],pinMarkers={},drawings=[];
+async function loadUserData(){try{pins=await DB.all('pins');drawings=await DB.all('drawings')}catch(e){pins=JSON.parse(localStorage.getItem('hf-pins')||'[]');drawings=JSON.parse(localStorage.getItem('hf-draw')||'[]')}renderPins();renderDrawings()}
+async function persist(store,item,del){try{del?await DB.del(store,item.id):await DB.put(store,item)}catch(e){localStorage.setItem('hf-pins',JSON.stringify(pins));localStorage.setItem('hf-draw',JSON.stringify(drawings))}}
+function renderPins(){Object.values(pinMarkers).forEach(m=>m.remove());pinMarkers={};
+ pins.forEach(p=>{const el=document.createElement('div');el.className='userpin';el.innerHTML=`<svg width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6 0 0 6 0 14c0 10 14 22 14 22s14-12 14-22C28 6 22 0 14 0z" fill="${p.color||STATUS[p.status]||'#e53935'}" stroke="#fff" stroke-width="2"/><circle cx="14" cy="14" r="5" fill="#fff"/></svg>`;
+  el.onclick=e=>{e.stopPropagation();openPoint(p.lon,p.lat,null,p)};pinMarkers[p.id]=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([p.lon,p.lat]).addTo(map)});renderList()}
+function pinDialog(p){showSheet(`<h2>Pin</h2><label>Name<input id="pn" value="${esc(p.name)}" style="width:100%;padding:8px;font-size:16px"></label>
+ <label>Status<select id="ps" style="width:100%;padding:8px;font-size:16px">${Object.keys(STATUS).map(s=>`<option ${s===p.status?'selected':''}>${s}</option>`).join('')}</select></label>
+ <label>Notes<textarea id="pnotes" style="width:100%;height:70px;font-size:16px">${esc(p.notes)}</textarea></label>
+ <label>Listing link<input id="pl" value="${esc(p.link)}" placeholder="https://" style="width:100%;padding:8px;font-size:16px"></label>
+ <div class="btns"><button id="pSave">Save</button><button id="pDel" style="background:#c62828">Delete</button></div>`);
+ $('#pSave').onclick=async()=>{Object.assign(p,{name:$('#pn').value,status:$('#ps').value,notes:$('#pnotes').value,link:$('#pl').value});if(!pins.includes(p))pins.push(p);await persist('pins',p);renderPins();openPoint(p.lon,p.lat,null,p)};
+ $('#pDel').onclick=async()=>{pins=pins.filter(x=>x.id!==p.id);await persist('pins',p,true);renderPins();$('#sheet').classList.add('hidden')}}
+$('#btnPin').onclick=()=>{const c=map.getCenter();pinDialog({id:uid(),lon:c.lng,lat:c.lat,name:'My spot',status:'Interested',notes:'',link:''})};
+
+/* ---------- tools: measure & draw (custom, touch friendly) ---------- */
+const tb=document.createElement('div');tb.id='tools';tb.innerHTML=`<style>
+#tools{position:fixed;left:8px;right:64px;bottom:calc(env(safe-area-inset-bottom) + 8px);z-index:5;display:flex;gap:4px;overflow-x:auto;padding:2px}
+#tools button,#toolbar2 button{flex:none;padding:8px 10px;border-radius:18px;border:0;background:#fff;box-shadow:0 1px 5px #0004;font-size:13px}
+#tools button.on{background:#ff6f00;color:#fff}
+#toolbar2{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 112px);z-index:6;background:#fff;border-radius:12px;padding:8px;box-shadow:0 2px 8px #0005;font-size:13px}
+#toolbar2 input[type=color]{width:36px;height:30px;border:0;vertical-align:middle}
+#toolbar2 input[type=text]{width:110px;padding:6px;font-size:16px}
+#prof{width:100%;height:80px}
+.maplibregl-ctrl-bottom-left{bottom:52px}</style>
+<button data-t="shortlist">⭐ Shortlist</button><button data-t="recent">🕘 Recent</button><button data-t="prio">⚖️ Priorities</button><button data-t="dist">📏 Distance</button><button data-t="area">📐 Area</button><button data-t="line">〰️ Line</button><button data-t="poly">⬠ Polygon</button><button data-t="rect">▭ Rect</button><button data-t="circle">◯ Circle</button><button data-t="free">✍️ Freehand</button><button data-t="list">📋 My Pins & Drawings</button>`;
+document.body.appendChild(tb);
+const t2=document.createElement('div');t2.id='toolbar2';t2.className='hidden';document.body.appendChild(t2);
+let tool=null,pts=[],editing=null,vMarkers=[];
+tb.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.t==='list')return openList();if(PANELS[b.dataset.t])return PANELS[b.dataset.t]();startTool(tool===b.dataset.t?null:b.dataset.t)});
+function startTool(t){stopEdit();tool=t;pts=[];tb.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+ if(!t){t2.classList.add('hidden');sketch();return}
+ $('#banner').classList.add('hidden');
+ const tips={dist:'Tap points along a path.',area:'Tap the corners of the area.',line:'Tap points.',poly:'Tap corners.',rect:'Tap two opposite corners.',circle:'Tap the centre, then the edge.',free:'Drag with one finger to draw. (Map won\u2019t pan while drawing.)'};
+ t2.innerHTML=`<div>${tips[t]}</div><div id="mres" style="font-weight:600;margin:4px 0"></div>${t==='dist'?'<canvas id="prof" class="hidden"></canvas>':''}
+ ${/dist|area/.test(t)?'':`<input type="color" id="dc" value="#e53935"> <input type="text" id="dl" placeholder="Label">`}
+ <button id="tUndo">↶ Undo</button> <button id="tDone">✔ ${/dist|area/.test(t)?'Save':'Finish'}</button> <button id="tCancel">✕</button>`;
+ t2.classList.remove('hidden');
+ $('#tUndo').onclick=()=>{pts.pop();sketch()};$('#tCancel').onclick=()=>startTool(null);$('#tDone').onclick=finish;
+ if(t==='free')map.dragPan.disable();else map.dragPan.enable();sketch()}
+function geomFor(t,p){if(!p.length)return null;
+ if(t==='rect'&&p.length>=2){const[a,b]=p;return{type:'Polygon',coordinates:[[a,[b[0],a[1]],b,[a[0],b[1]],a]]}}
+ if(t==='circle'&&p.length>=2){const r=hav(p[0],p[1]),c=p[0],ring=[];for(let i=0;i<=64;i++){const th=i/64*2*Math.PI;ring.push([c[0]+r*Math.cos(th)/(111320*Math.cos(c[1]*Math.PI/180)),c[1]+r*Math.sin(th)/111320])}return{type:'Polygon',coordinates:[ring]}}
+ if(/area|poly/.test(t)&&p.length>=3)return{type:'Polygon',coordinates:[[...p,p[0]]]};
+ if(p.length>=2)return{type:'LineString',coordinates:p};return null}
+function measure(g){if(!g)return'';if(g.type==='Polygon')return fmtArea(areaM2(g.coordinates[0].slice(0,-1)))+' · perimeter '+fmtMi(len(g.coordinates[0]));return fmtDist(len(g.coordinates))}
+const len=c=>c.reduce((s,p,i)=>i?s+hav(c[i-1],p):0,0);
+function sketch(){const src=map.getSource('sketch');if(!src)return;const g=geomFor(tool,pts);const f=pts.map(p=>({type:'Feature',geometry:{type:'Point',coordinates:p},properties:{}}));if(g)f.push({type:'Feature',geometry:g,properties:{}});src.setData(fc(f));
+ const m=$('#mres');if(m)m.textContent=measure(g);if(tool==='dist'){clearTimeout(sketch.t);sketch.t=setTimeout(profile,600)}}
+async function profile(){const c=$('#prof');if(!c||pts.length<2)return c&&c.classList.add('hidden');const total=len(pts),N=40,samples=[];
+ for(let i=0;i<=N;i++){let d=total*i/N,k=1;while(k<pts.length-1&&hav(pts[0],pts[0])+len(pts.slice(0,k+1))<d)k++;const s0=len(pts.slice(0,k)),seg=hav(pts[k-1],pts[k])||1,f=Math.min(1,Math.max(0,(d-s0)/seg));const p=[pts[k-1][0]+(pts[k][0]-pts[k-1][0])*f,pts[k-1][1]+(pts[k][1]-pts[k-1][1])*f];let e=null;try{e=map.queryTerrainElevation(p,{exaggerated:false})}catch(x){}samples.push(e)}
+ if(samples.some(v=>v==null)){c.classList.add('hidden');$('#mres').textContent+=' (turn on ⛰️ 3D for elevation profile)';return}
+ c.classList.remove('hidden');c.width=c.clientWidth*2;c.height=160;const x=c.getContext('2d'),mn=Math.min(...samples),mx=Math.max(...samples),r=mx-mn||1;
+ x.clearRect(0,0,c.width,c.height);x.beginPath();samples.forEach((v,i)=>{const X=i/N*c.width,Y=150-(v-mn)/r*130;i?x.lineTo(X,Y):x.moveTo(X,Y)});x.strokeStyle='#2f5d3a';x.lineWidth=4;x.stroke();
+ x.fillStyle='#000';x.font='22px sans-serif';x.fillText(`${Math.round(mx*3.28084)} ft`,4,22);x.fillText(`${Math.round(mn*3.28084)} ft  · gain ${Math.round(samples.reduce((s,v,i)=>i&&v>samples[i-1]?s+v-samples[i-1]:s,0)*3.28084)} ft`,4,154)}
+async function finish(){const g=geomFor(tool==='free'?'line':tool,pts);if(!g){startTool(null);return}
+ const d={id:uid(),kind:tool,geometry:g,color:$('#dc')?$('#dc').value:'#ff6f00',label:$('#dl')?$('#dl').value:'',created:Date.now()};
+ if(/dist|area/.test(tool))d.label=measure(g).split(' · ')[0];if(tool==='circle')d.center=pts[0];
+ drawings.push(d);await persist('drawings',d);renderDrawings();startTool(null)}
+function renderDrawings(){const s=map.getSource('draw');if(s)s.setData(fc(drawings.map(d=>({type:'Feature',id:undefined,geometry:d.geometry,properties:{id:d.id,color:d.color,label:d.label||''}}))));renderList()}
+// freehand
+let drawingFree=false;
+map.on('touchstart',e=>{if(tool==='free'&&e.points.length===1){drawingFree=true;pts=[[e.lngLat.lng,e.lngLat.lat]]}});
+map.on('mousedown',e=>{if(tool==='free'){drawingFree=true;pts=[[e.lngLat.lng,e.lngLat.lat]]}});
+const fm=e=>{if(drawingFree){pts.push([e.lngLat.lng,e.lngLat.lat]);sketch()}};map.on('touchmove',fm);map.on('mousemove',fm);
+map.on('touchend',()=>drawingFree=false);map.on('mouseup',()=>drawingFree=false);
+// map click
+map.on('click',e=>{if(lpFired){lpFired=false;return}const p=[e.lngLat.lng,e.lngLat.lat];
+ if(tool&&tool!=='free'){if(/rect|circle/.test(tool)&&pts.length>=2)pts=[];pts.push(p);sketch();return}
+ if(tool==='free')return;
+ const hit=map.queryRenderedFeatures(e.point,{layers:['draw-fill','draw-line']})[0];
+ if(hit){const d=drawings.find(x=>x.id===hit.properties.id);if(d)return drawingSheet(d)}
+ $('#results').innerHTML='';openPoint(p[0],p[1])});
+function drawingSheet(d){const g=d.geometry;showSheet(`<h2>${esc(d.label||d.kind)}</h2><div>${measure(g)}</div>
+ <label>Label <input id="el" value="${esc(d.label)}" style="padding:6px;font-size:16px;width:60%"></label> <input type="color" id="ec" value="${esc(d.color)}">
+ <div class="btns"><button id="eSave">Save</button><button id="eEdit">Move vertices</button><button id="eDel" style="background:#c62828">Delete</button></div>`);
+ $('#eSave').onclick=async()=>{d.label=$('#el').value;d.color=$('#ec').value;await persist('drawings',d);renderDrawings();$('#sheet').classList.add('hidden')};
+ $('#eDel').onclick=async()=>{undoStack.push(JSON.stringify(d));drawings=drawings.filter(x=>x!==d);await persist('drawings',d,true);renderDrawings();$('#sheet').classList.add('hidden');toast('Deleted. <button onclick="undoDelete()">Undo</button>')};
+ $('#eEdit').onclick=()=>{$('#sheet').classList.add('hidden');startEdit(d)}}
+const undoStack=[];window.undoDelete=async()=>{const d=JSON.parse(undoStack.pop()||'null');if(!d)return;drawings.push(d);await persist('drawings',d);renderDrawings();t2.classList.add('hidden')};
+function toast(h){t2.innerHTML=h+' <button onclick="this.parentNode.classList.add(\'hidden\')">OK</button>';t2.classList.remove('hidden');setTimeout(()=>t2.classList.add('hidden'),6000)}
+function startEdit(d){stopEdit();editing={d,orig:JSON.stringify(d.geometry)};const g=d.geometry;const ring=g.type==='Polygon'?g.coordinates[0]:g.coordinates;const n=g.type==='Polygon'?ring.length-1:ring.length;
+ const step=Math.max(1,Math.ceil(n/60));
+ for(let i=0;i<n;i+=step){const el=document.createElement('div');el.style.cssText='width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid #ff6f00';
+  const m=new maplibregl.Marker({element:el,draggable:true}).setLngLat(ring[i]).addTo(map);
+  m.on('drag',()=>{const ll=m.getLngLat();ring[i]=[ll.lng,ll.lat];if(g.type==='Polygon'&&i===0)ring[ring.length-1]=ring[0];renderDrawings()});vMarkers.push(m)}
+ t2.innerHTML=`Drag the white dots to move vertices. <button id="xSave">✔ Done</button> <button id="xUndo">↶ Undo changes</button>`;t2.classList.remove('hidden');
+ $('#xSave').onclick=async()=>{await persist('drawings',d);stopEdit();t2.classList.add('hidden')};
+ $('#xUndo').onclick=()=>{d.geometry=JSON.parse(editing.orig);renderDrawings();stopEdit();t2.classList.add('hidden')}}
+function stopEdit(){vMarkers.forEach(m=>m.remove());vMarkers=[];editing=null}
+
+/* ---------- list / export / import ---------- */
+function renderList(){const el=$('#pinList');if(el)el.innerHTML=listHTML()}
+function listHTML(){return (pins.map(p=>`<div style="padding:6px 0;border-bottom:1px solid #eee" data-pin="${p.id}"><b style="color:${STATUS[p.status]}">●</b> ${esc(p.name)} <span class="small">${esc(p.status)}</span></div>`).join('')||'<div class="small">No pins yet.</div>')+
+ drawings.map(d=>`<div style="padding:6px 0;border-bottom:1px solid #eee" data-dr="${d.id}"><b style="color:${esc(d.color)}">■</b> ${esc(d.label||d.kind)} <span class="small">${esc(measure(d.geometry).split(' · ')[0])}</span></div>`).join('')}
+function openList(){showSheet(`<h2>My Pins & Drawings</h2>${listHTML()}<div class="btns"><button id="exG">Export GeoJSON</button><button id="exK">Export KML</button><button id="imp">Import</button></div><input type="file" id="impF" accept=".geojson,.json,.kml" class="hidden">`);
+ document.querySelectorAll('#sheetBody [data-pin]').forEach(e=>e.onclick=()=>{const p=pins.find(x=>x.id===e.dataset.pin);map.flyTo({center:[p.lon,p.lat],zoom:15});openPoint(p.lon,p.lat,null,p)});
+ document.querySelectorAll('#sheetBody [data-dr]').forEach(e=>e.onclick=()=>{const d=drawings.find(x=>x.id===e.dataset.dr);const c=(d.geometry.type==='Polygon'?d.geometry.coordinates[0]:d.geometry.coordinates);const b=c.reduce((b,p)=>b.extend(p),new maplibregl.LngLatBounds(c[0],c[0]));map.fitBounds(b,{padding:60});drawingSheet(d)});
+ $('#exG').onclick=()=>download('homestead.geojson',JSON.stringify(toGeoJSON(),null,1),'application/geo+json');
+ $('#exK').onclick=()=>download('homestead.kml',toKML(),'application/vnd.google-earth.kml+xml');
+ $('#imp').onclick=()=>$('#impF').click();$('#impF').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();try{await importData(t);toast('Imported ✔')}catch(err){toast('Import failed: '+esc(err.message))}}}
+function toGeoJSON(){return fc([...shortlist.map(s=>({type:'Feature',geometry:{type:'Point',coordinates:[s.lon,s.lat]},properties:{hf:'shortlist',name:s.name,price:s.price,acres:s.acres,order:s.order,fitScore:s.R?scoreReport(s.R).score:null}})),...pins.map(p=>({type:'Feature',geometry:{type:'Point',coordinates:[p.lon,p.lat]},properties:{hf:'pin',name:p.name,status:p.status,notes:p.notes,link:p.link}})),...drawings.map(d=>({type:'Feature',geometry:d.geometry,properties:{hf:'drawing',kind:d.kind,name:d.label,color:d.color}}))])}
+function toKML(){const co=c=>c.map(p=>p.join(',')).join(' ');const pm=(n,d,g)=>`<Placemark><name>${esc(n)}</name><description>${esc(d)}</description>${g}</Placemark>`;
+ return `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Homestead Finder</name>${pins.map(p=>pm(p.name,`${p.status}. ${p.notes||''} ${p.link||''}`,`<Point><coordinates>${p.lon},${p.lat}</coordinates></Point>`)).join('')}${drawings.map(d=>pm(d.label||d.kind,measure(d.geometry),d.geometry.type==='Polygon'?`<Polygon><outerBoundaryIs><LinearRing><coordinates>${co(d.geometry.coordinates[0])}</coordinates></LinearRing></outerBoundaryIs></Polygon>`:`<LineString><coordinates>${co(d.geometry.coordinates)}</coordinates></LineString>`)).join('')}</Document></kml>`}
+function download(n,t,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type}));a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500)}
+async function importData(t){let feats=[];
+ if(t.trim().startsWith('<')){const doc=new DOMParser().parseFromString(t,'text/xml');const pc=s=>s.trim().split(/\s+/).map(x=>x.split(',').slice(0,2).map(Number));
+  [...doc.getElementsByTagName('Placemark')].forEach(p=>{const name=p.getElementsByTagName('name')[0]?.textContent||'';const desc=p.getElementsByTagName('description')[0]?.textContent||'';
+   const pt=p.querySelector('Point coordinates'),ls=p.querySelector('LineString coordinates'),pg=p.querySelector('Polygon coordinates');
+   if(pt)feats.push({type:'Feature',geometry:{type:'Point',coordinates:pc(pt.textContent)[0]},properties:{name,notes:desc}});
+   else if(ls)feats.push({type:'Feature',geometry:{type:'LineString',coordinates:pc(ls.textContent)},properties:{name}});
+   else if(pg)feats.push({type:'Feature',geometry:{type:'Polygon',coordinates:[pc(pg.textContent)]},properties:{name}})})}
+ else{const j=JSON.parse(t);feats=j.type==='FeatureCollection'?j.features:[j]}
+ for(const f of feats){const pr=f.properties||{};if(!f.geometry)continue;
+  if(f.geometry.type==='Point'){const p={id:uid(),lon:f.geometry.coordinates[0],lat:f.geometry.coordinates[1],name:pr.name||'Imported pin',status:STATUS[pr.status]?pr.status:'Interested',notes:pr.notes||'',link:pr.link||''};pins.push(p);await persist('pins',p)}
+  else if(/LineString|Polygon/.test(f.geometry.type)&&!/Multi/.test(f.geometry.type)){const d={id:uid(),kind:pr.kind||(f.geometry.type==='Polygon'?'poly':'line'),geometry:f.geometry,color:pr.color||'#e53935',label:pr.name||''};drawings.push(d);await persist('drawings',d)}}
+ renderPins();renderDrawings();openList()}
+
+/* ---------- settings ---------- */
+function status(){$('#rcKey').value=settings.rcKey||'';
+ $('#status').innerHTML=`<div><b>RentCast listings:</b> ${settings.rcKey?'<span class="ok">key saved</span>':'<span class="bad">no key – no live pins</span>'}</div>
+ <div class="small">No key needed: map (OpenFreeMap/OSM), satellite (Esri), terrain (AWS Terrain Tiles), search (Photon/Nominatim), elevation (USGS EPQS), soil (USDA SDA), wildlife & fish (iNaturalist), water/power/buildings (OSM Overpass), wells (USGS NWIS), minerals (USGS MRDS).</div>
+ <div>Network: ${navigator.onLine?'<span class="ok">online</span>':'<span class="bad">offline</span>'}</div>`}
+function diagHTML(){const d=hfDiag;return `<details id="diag"><summary>Diagnostics</summary><div class="small" style="word-break:break-all">MapLibre ${esc(d.ml)} · WebGL ${d.gl?'yes':'NO'} · ${esc(d.protocol)} ${esc(d.origin)}<br>Fallback: ${esc(d.fallback||'none')} · style timeout: ${d.styleTimeout} · context lost: ${d.contextLost}<br><b>Failed tiles</b>: ${d.failedTiles.map(esc).join('<br>')||'none'}<br><b>Last errors</b>: ${d.errors.map(esc).join('<br>')||'none'}<br>${esc(d.ua)}</div></details>`}
+$('#btnSettings').onclick=()=>{status();$('#status').insertAdjacentHTML('beforeend',diagHTML());renderList();$('#settings').classList.remove('hidden')};
+$('#optLink').innerHTML=(()=>{const s=STATES.find(x=>x[0]===settings.state);return s?searchLinks(s[1],settings.mode):''})();
+$('#closeSettings').onclick=()=>$('#settings').classList.add('hidden');
+$('#saveSettings').onclick=()=>{settings.rcKey=$('#rcKey').value.trim();saveSettings();saleVis();status();refreshListings(true)};
+$('#clearCache').onclick=async()=>{await DB.clear('cache').catch(()=>{});status();refreshListings(true)};
+const net=()=>$('#offline').classList.toggle('hidden',navigator.onLine);addEventListener('online',net);addEventListener('offline',net);net();
+map.on('error',e=>{if(!navigator.onLine)net()});
+if('serviceWorker' in navigator&&location.protocol!=='file:'&&!window.HF_STANDALONE)navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+/* ---------- Hunting Getaway Report ---------- */
+const AGENCY={AL:['Alabama DCNR Wildlife & Freshwater Fisheries','https://www.outdooralabama.com/hunting'],AK:['Alaska Dept. of Fish & Game','https://www.adfg.alaska.gov/index.cfm?adfg=huntingregulations.main'],AZ:['Arizona Game & Fish','https://www.azgfd.com/hunting/regulations/'],AR:['Arkansas Game & Fish Commission','https://www.agfc.com/hunting/'],CA:['California Dept. of Fish & Wildlife','https://wildlife.ca.gov/Regulations'],CO:['Colorado Parks & Wildlife','https://cpw.state.co.us/hunting'],CT:['Connecticut DEEP Wildlife','https://portal.ct.gov/DEEP/Hunting/Hunting-and-Trapping'],DE:['Delaware DNREC Fish & Wildlife','https://dnrec.delaware.gov/fish-wildlife/hunting/'],FL:['Florida FWC','https://myfwc.com/hunting/regulations/'],GA:['Georgia DNR Wildlife Resources','https://georgiawildlife.com/hunting/regulations'],HI:['Hawaii DLNR Forestry & Wildlife','https://dlnr.hawaii.gov/recreation/hunting/'],ID:['Idaho Fish & Game','https://idfg.idaho.gov/rules/hunting'],IL:['Illinois DNR','https://dnr.illinois.gov/hunting.html'],IN:['Indiana DNR Fish & Wildlife','https://www.in.gov/dnr/fish-and-wildlife/hunting-and-trapping/'],IA:['Iowa DNR','https://www.iowadnr.gov/hunting'],KS:['Kansas Dept. of Wildlife & Parks','https://ksoutdoors.com/Hunting'],KY:['Kentucky Fish & Wildlife','https://fw.ky.gov/Hunt/Pages/default.aspx'],LA:['Louisiana Wildlife & Fisheries','https://www.wlf.louisiana.gov/page/hunting'],ME:['Maine Inland Fisheries & Wildlife','https://www.maine.gov/ifw/hunting-trapping/'],MD:['Maryland DNR Wildlife','https://dnr.maryland.gov/wildlife/Pages/hunt_trap/default.aspx'],MA:['MassWildlife','https://www.mass.gov/hunting-regulations'],MI:['Michigan DNR','https://www.michigan.gov/dnr/things-to-do/hunting'],MN:['Minnesota DNR','https://www.dnr.state.mn.us/hunting/index.html'],MS:['Mississippi Wildlife, Fisheries & Parks','https://www.mdwfp.com/hunting'],MO:['Missouri Dept. of Conservation','https://mdc.mo.gov/hunting-trapping'],MT:['Montana Fish, Wildlife & Parks','https://fwp.mt.gov/hunt/regulations'],NE:['Nebraska Game & Parks','https://outdoornebraska.gov/hunt/'],NV:['Nevada Dept. of Wildlife','https://www.ndow.org/hunt/'],NH:['New Hampshire Fish & Game','https://www.wildlife.nh.gov/hunting'],NJ:['NJ Fish & Wildlife','https://dep.nj.gov/njfw/hunting/'],NM:['New Mexico Game & Fish','https://www.wildlife.state.nm.us/hunting/'],NY:['NY DEC','https://dec.ny.gov/things-to-do/hunting'],NC:['NC Wildlife Resources Commission','https://www.ncwildlife.org/hunting'],ND:['North Dakota Game & Fish','https://gf.nd.gov/hunting'],OH:['Ohio DNR Wildlife','https://ohiodnr.gov/discover-and-learn/safety-conservation/about-ODNR/wildlife/hunting-trapping'],OK:['Oklahoma Wildlife Conservation','https://www.wildlifedepartment.com/hunting'],OR:['Oregon Dept. of Fish & Wildlife','https://myodfw.com/hunting'],PA:['Pennsylvania Game Commission','https://www.pgc.pa.gov/HuntTrap/Pages/default.aspx'],RI:['Rhode Island DEM Fish & Wildlife','https://dem.ri.gov/natural-resources-bureau/fish-wildlife/hunting-trapping'],SC:['South Carolina DNR','https://www.dnr.sc.gov/hunting.html'],SD:['South Dakota Game, Fish & Parks','https://gfp.sd.gov/hunting/'],TN:['Tennessee Wildlife Resources Agency','https://www.tn.gov/twra/hunting.html'],TX:['Texas Parks & Wildlife','https://tpwd.texas.gov/regulations/outdoor-annual/hunting/'],UT:['Utah Division of Wildlife Resources','https://wildlife.utah.gov/hunting.html'],VT:['Vermont Fish & Wildlife','https://vtfishandwildlife.com/hunt'],VA:['Virginia DWR','https://dwr.virginia.gov/hunting/'],WA:['Washington Dept. of Fish & Wildlife','https://wdfw.wa.gov/hunting'],WV:['West Virginia DNR','https://wvdnr.gov/hunting/'],WI:['Wisconsin DNR','https://dnr.wisconsin.gov/topic/hunt'],WY:['Wyoming Game & Fish','https://wgfd.wyoming.gov/hunting']};
+async function gatherReport(lon,lat){
+ _ref=[lon,lat];const R={};
+ const ovq=`(node["place"~"^(city|town|village)$"](around:60000,${lat},${lon});nwr["amenity"="hospital"](around:80000,${lat},${lon});nwr["amenity"="fuel"](around:40000,${lat},${lon});way["highway"](around:400,${lat},${lon});way["highway"~"^(motorway|trunk)$"](around:5000,${lat},${lon});nwr["aeroway"="aerodrome"](around:10000,${lat},${lon});nwr["leisure"="shooting_ground"](around:8000,${lat},${lon});nwr["sport"="shooting"](around:8000,${lat},${lon});way["power"~"^(line|minor_line)$"](around:3000,${lat},${lon}););out tags center geom 400;`;
+ const pad=`https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/PADUS_Public_Access/FeatureServer/0/query?where=1%3D1&geometry=${lon},${lat}&geometryType=esriGeometryPoint&inSR=4326&distance=8000&units=esriSRUnit_Meter&outFields=Unit_Nm,Pub_Access,MngNm_Desc,DesTp_Desc,GIS_Acres&returnGeometry=false&f=json&resultRecordCount=25`;
+ const fema=`https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28/query?geometry=${lon},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FLD_ZONE,ZONE_SUBTY,SFHA_TF&returnGeometry=false&f=json`;
+ const nwis=`https://waterservices.usgs.gov/nwis/site/?format=rdb&siteType=GW&siteStatus=all&bBox=${(lon-.05).toFixed(4)},${(lat-.04).toFixed(4)},${(lon+.05).toFixed(4)},${(lat+.04).toFixed(4)}`;
+ const tb_=(pr,ms=45000)=>Promise.race([pr,new Promise(r=>setTimeout(()=>r(null),ms))]);
+ const [ov,pd,fm,wild,wl,rev]=await Promise.all([tb_(overpass(ovq).catch(()=>null),60000),getJSON(pad,{},25000).catch(()=>null),getJSON(fema,{},20000).catch(()=>null),
+  inat('observations/species_counts',{lat,lng:lon,radius:15,quality_grade:'research',per_page:200,iconic_taxa:'Mammalia,Aves'}).catch(()=>null),
+  getText(nwis).catch(e=>String(e.message).includes('404')?'':null),getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&lat=${lat}&lon=${lon}`).catch(()=>null)]);
+ const els=ov?ov.elements:null;
+ const nearest=f=>{if(!els)return undefined;let b=null;els.filter(e=>e.tags&&f(e.tags)).forEach(e=>{const p=e.geometry&&e.type==='way'?nearestOnLine(e.geometry):elPt(e);if(!p)return;const d=hav([lon,lat],p);if(!b||d<b.d)b={d,name:e.tags.name||e.tags.ref||'',tags:e.tags}});return b};
+ R.town=nearest(t=>/city|town/.test(t.place||''));R.village=nearest(t=>t.place==='village');
+ R.hosp=nearest(t=>t.amenity==='hospital');R.fuel=nearest(t=>t.amenity==='fuel');
+ R.road=nearest(t=>t.highway&&!/^(motorway|trunk|path|footway|cycleway|steps|bridleway|construction|proposed)$/.test(t.highway));
+ R.hwy=nearest(t=>/^(motorway|trunk)$/.test(t.highway||''));R.air=nearest(t=>t.aeroway==='aerodrome');R.range=nearest(t=>t.leisure==='shooting_ground'||t.sport==='shooting');
+ R.power=nearest(t=>/line/.test(t.power||''));R.ovOK=!!els;
+ R.pad=pd&&pd.features?pd.features.map(f=>f.attributes):null;
+ R.flood=fm&&fm.features?(fm.features[0]?fm.features[0].attributes:{FLD_ZONE:'none mapped'}):null;
+ R.game=wild?wild.results.filter(r=>isGame(r.taxon.preferred_common_name||'')).map(r=>r.taxon):null;R.species=wild?wild.total_results:null;
+ R.wells=wl==null?null:wl===''?0:Math.max(0,wl.split('\n').filter(r=>r&&!r.startsWith('#')).length-2);
+ let e=null;await tb_(loadElev(lon,lat,(id,h)=>{e=h}).catch(()=>{}),20000);const m=e&&e.match(/Slope: ([\d.]+)%/);R.slope=m?+m[1]:null;
+ const a=(rev&&rev.address)||{};R.county=a.county||'';R.stateName=a.state||'';R.st=(STATES.find(s=>s[1]===a.state)||[])[0]||settings.state||'';
+ R.water=await tb_(loadWater(lon,lat).catch(()=>null),40000);
+ return R}
+async function openReport(lon,lat){const tok=++sheetToken;showSheet(`<h2>🏕 Hunting Getaway Report</h2><div class="small">${lat.toFixed(5)},${lon.toFixed(5)}</div><div id="rep"><span class="small">Gathering data from OSM, PAD-US, FEMA, iNaturalist, USGS… (up to ~30 s)</span></div>`);
+ const R=await getReport(lon,lat);if(tok!==sheetToken)return;lastRep={R,lon,lat};renderReport(lastRep)}
+function renderReport({R,lon,lat}){const S=scoreReport(R);historyScore(lon,lat,S.score);curCtx=curCtx&&Math.abs(curCtx.lon-lon)<1e-6?curCtx:{lon,lat,name:`Spot ${lat.toFixed(4)},${lon.toFixed(4)}`};const li=a=>a.length?'<ul>'+a.map(x=>`<li>${x}</li>`).join('')+'</ul>':'<div class="small">none</div>';
+ const ag=AGENCY[R.st];const ll=`${lat},${lon}`;
+ set('rep',`<div style="font-size:28px;font-weight:700;color:${S.score>=65?'#2e7d32':S.score>=45?'#ef6c00':'#c62828'}" id="fitScore">Fit score ${S.score}/100</div>
+ <div class="btns"><button id="repPrio">⚖️ My Priorities</button>${slButton()}</div>
+ <details><summary>How this score was computed</summary><div class="small">Weighted: score = 50 + 50 × Σ(weight × factor)/Σ(weights of known factors); factors range −1…+1, weights 0–5 from My Priorities.<ul>${S.parts.map(p=>`<li>${esc(p)}</li>`).join('')}</ul></div></details>
+ <h3>✅ Pros</h3>${li(S.pros)}<h3>⚠️ Cons</h3>${li(S.cons)}<h3>🚩 Warnings</h3>${li(S.warn)}
+ <h3>💧 Water</h3><div>${R.water?waterHTML(R.water,R.st):'<span class="small">unknown</span>'}</div><h3>Check these yourself</h3><div class="btns"><a target="_blank" href="https://wildfirerisk.org/explore/">Wildfire risk (USFS)</a><a target="_blank" href="https://broadbandmap.fcc.gov/location-summary/mobile?version=jun2024&lat=${lat}&lon=${lon}&zoom=12">Cell coverage (FCC)</a><a target="_blank" href="https://msc.fema.gov/portal/search?AddressQuery=${ll}">FEMA flood map</a><a target="_blank" href="https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-data-overview">PAD-US viewer</a><a target="_blank" href="https://www.google.com/search?q=${encodeURIComponent((R.county||'')+' '+(R.stateName||'')+' firearm discharge ordinance')}">County firearm discharge rules</a></div>
+ <div>${ag?`Hunting regulations: <a target="_blank" href="${ag[1]}">${esc(ag[0])}</a>`:'State unknown – see all agencies below'}</div>
+ <ul class="small"><li>Verify <b>legal access & easements</b> (recorded, deeded access – not just a dirt road).</li><li>Ask whether <b>mineral rights</b> convey with the land.</li><li>Read the deed for <b>restrictions, covenants or HOA</b> rules (hunting, camping, structures).</li><li>Check <b>county firearm-discharge</b> and setback rules near dwellings.</li></ul>
+ <details><summary>All 50 state wildlife agencies</summary><div class="small">${STATES.map(s=>`<a target="_blank" href="${AGENCY[s[0]][1]}">${s[0]}: ${esc(AGENCY[s[0]][0])}</a>`).join('<br>')}</div></details>
+ <div class="src">Sources: OpenStreetMap via Overpass (towns, hospital, fuel, roads, highways, airports, ranges, power); USGS PAD-US 4 Public Access; FEMA NFHL; iNaturalist research-grade observations (15 km); USGS NWIS groundwater sites; USGS EPQS / AWS Terrain DEM slope. Score is a rough guide, not an appraisal.</div>`)}
+document.addEventListener('click',e=>{if(e.target.closest('#repPrio'))return openPriorities();const b=e.target.closest('#repBtn');if(b)openReport(+b.dataset.lon,+b.dataset.lat)});
+
+/* ---------- press-and-hold to drop a pin ---------- */
+let lpTimer=null,lpStart=null,lpFired=false;
+function lpCancel(){clearTimeout(lpTimer);lpTimer=null;lpStart=null}
+function lpBegin(x,y){lpCancel();if(tool||editing)return;lpStart={x,y};
+ lpTimer=setTimeout(()=>{lpTimer=null;if(!lpStart||tool||editing)return;const r=map.getCanvas().getBoundingClientRect();const ll=map.unproject([lpStart.x-r.left,lpStart.y-r.top]);lpStart=null;lpFired=true;setTimeout(()=>lpFired=false,700);
+  try{navigator.vibrate&&navigator.vibrate(30)}catch(e){}dropPinAt(ll.lng,ll.lat)},500)}
+function lpMove(x,y){if(lpStart&&Math.hypot(x-lpStart.x,y-lpStart.y)>10)lpCancel()}
+const cc=map.getCanvasContainer();
+cc.addEventListener('touchstart',e=>{if(e.touches.length!==1)return lpCancel();lpBegin(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
+cc.addEventListener('touchmove',e=>{if(e.touches.length!==1)return lpCancel();lpMove(e.touches[0].clientX,e.touches[0].clientY)},{passive:true});
+['touchend','touchcancel'].forEach(t=>cc.addEventListener(t,lpCancel,{passive:true}));
+cc.addEventListener('mousedown',e=>{if(e.button!==0||e.ctrlKey||e.shiftKey)return;lpBegin(e.clientX,e.clientY)});
+cc.addEventListener('mousemove',e=>lpMove(e.clientX,e.clientY));
+['mouseup','mouseleave','wheel'].forEach(t=>cc.addEventListener(t,lpCancel,{passive:true}));
+cc.addEventListener('contextmenu',e=>{if(lpFired)e.preventDefault()});
+async function dropPinAt(lon,lat){const p={id:uid(),lon,lat,name:'Dropped pin',status:'Interested',color:'#e53935',notes:'',link:''};pins.push(p);await persist('pins',p);renderPins();pinEditor(p)}
+const COLORS=['#e53935','#fb8c00','#fdd835','#43a047','#1e88e5','#8e24aa','#6d4c41','#212121'];
+function pinEditor(p){const tok=++sheetToken;curCtx={lon:p.lon,lat:p.lat,name:p.name};recordHistory(p.lon,p.lat,p.name);const ll=`${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`;
+ showSheet(`<h2>📍 Pin</h2><label>Name / label<input id="pn" value="${esc(p.name)}" style="width:100%;padding:8px;font-size:16px"></label>
+ <label>Status<select id="ps" style="width:100%;padding:8px;font-size:16px">${Object.keys(STATUS).map(s=>`<option ${s===p.status?'selected':''}>${s}</option>`).join('')}</select></label>
+ <div style="margin:6px 0">Color <span id="pcol">${COLORS.map(c=>`<button data-c="${c}" style="width:28px;height:28px;border-radius:50%;margin:2px;background:${c};border:3px solid ${c===p.color?'#000':'#fff'};box-shadow:0 0 2px #0008"></button>`).join('')}</span></div>
+ <label>Notes<textarea id="pnotes" style="width:100%;height:60px;font-size:16px">${esc(p.notes)}</textarea></label>
+ <div class="small" id="psaved">Saved automatically</div>
+ <div class="btns"><button id="repBtn" data-lon="${p.lon}" data-lat="${p.lat}">🏕 Getaway Report</button>${slButton()}<button id="pDel" style="background:#c62828">Delete pin</button></div>
+ <h3>This spot</h3><div class="small">${ll}</div>${sec('elev','Elevation & slope')}${sec('pgame','Game recorded within ~5 km')}`);
+ const save=async()=>{Object.assign(p,{name:$('#pn').value,status:$('#ps').value,notes:$('#pnotes').value});await persist('pins',p);renderPins();const s=$('#psaved');if(s)s.textContent='Saved ✓ '+new Date().toLocaleTimeString()};
+ ['#pn','#pnotes'].forEach(s=>$(s).addEventListener('input',save));$('#ps').onchange=save;
+ document.querySelectorAll('#pcol button').forEach(b=>b.onclick=()=>{p.color=b.dataset.c;document.querySelectorAll('#pcol button').forEach(x=>x.style.borderColor=x.dataset.c===p.color?'#000':'#fff');save()});
+ $('#pDel').onclick=async()=>{pins=pins.filter(x=>x.id!==p.id);await persist('pins',p,true);renderPins();$('#sheet').classList.add('hidden')};
+ if(!navigator.onLine){set('elev','<span class="small">Offline</span>');set('pgame','<span class="small">Offline</span>');return}
+ const live=f=>(...a)=>{if(tok===sheetToken)f(...a)};
+ loadElev(p.lon,p.lat,live(set)).catch(()=>live(fail)('elev','USGS EPQS'));
+ inat('observations/species_counts',{lat:p.lat,lng:p.lon,radius:5,quality_grade:'research',photos:true,taxon_id:GAME_IDS.join(','),per_page:100}).then(live(j=>{const g=new Map();(j.results||[]).forEach(r=>{const k=gameGroup(r.taxon);if(k)g.set(k,(g.get(k)||0)+r.count)});
+  set('pgame',g.size?[...g].sort((x,y)=>y[1]-x[1]).map(([k,c])=>`<span class="sp game">${esc(GAME_TAXA[k])} · ${c}</span>`).join('')+'<div class="src">iNaturalist research-grade observations</div>':'<span class="small">No verified game observations recorded here yet</span>')})).catch(()=>live(fail)('pgame','iNaturalist'))}
+
+/* ---------- progressive labels, hybrid road overlay, trails & backroads ---------- */
+function addDetailLayers(){const S='openmaptiles',F=['Noto Sans Regular'],FB=['Noto Sans Bold'];if(!map.getSource(S))return;
+ const halo={'text-halo-color':'#fff','text-halo-width':1.6,'text-halo-blur':0.5};
+ const L=(def,before)=>{if(!map.getLayer(def.id))map.addLayer(def,before)};
+ const firstSym=(map.getStyle().layers.find(l=>l.type==='symbol')||{}).id;
+ // names for tracks/forest roads (liberty only names minor/path)
+ L({id:'hf-track-name',type:'symbol',source:S,'source-layer':'transportation_name',minzoom:13.5,filter:['match',['get','class'],['track','service'],true,false],layout:{'symbol-placement':'line','text-field':['coalesce',['get','name:en'],['get','name'],['get','ref']],'text-font':F,'text-size':11,'text-max-angle':30},paint:{'text-color':'#5d4037',...halo}});
+ L({id:'hf-park-label',type:'symbol',source:S,'source-layer':'park',minzoom:8,layout:{'text-field':['get','name'],'text-font':FB,'text-size':['interpolate',['linear'],['zoom'],8,10,14,13],'text-max-width':8,'symbol-placement':'point'},paint:{'text-color':'#2e7d32',...halo}});
+ L({id:'hf-peak',type:'symbol',source:S,'source-layer':'mountain_peak',minzoom:10,filter:['match',['get','class'],['peak','volcano'],true,false],layout:{'text-field':['format','▲ ',{},['get','name'],{},['case',['has','ele_ft'],['concat','\n',['to-string',['get','ele_ft']],' ft'],''],{'font-scale':0.85}],'text-font':F,'text-size':11,'text-anchor':'top'},paint:{'text-color':'#6d4c41',...halo}});
+ L({id:'hf-housenumber',type:'symbol',source:S,'source-layer':'housenumber',minzoom:17,layout:{'text-field':['get','housenumber'],'text-font':F,'text-size':10},paint:{'text-color':'#616161',...halo}});
+ // legibility: halos everywhere, stronger in satellite mode
+ map.getStyle().layers.filter(l=>l.type==='symbol').forEach(l=>{try{if(!map.getPaintProperty(l.id,'text-halo-width'))map.setPaintProperty(l.id,'text-halo-width',1.5);if(!map.getPaintProperty(l.id,'text-halo-color'))map.setPaintProperty(l.id,'text-halo-color','#fff')}catch(e){}});
+ // POIs a bit earlier (gas, hospitals, stores, churches, schools, campgrounds, slipways…)
+ [['poi_r1',14],['poi_r7',15],['poi_r20',16]].forEach(([id,z])=>{if(map.getLayer(id))map.setLayerZoomRange(id,z,24)})}
+let trailsOn=settings.trails===true;
+function ensureLazy(){if(map.getLayer('hf-trails')||!map.getSource('openmaptiles'))return;const S='openmaptiles';const L=(def,before)=>{if(!map.getLayer(def.id))map.addLayer(def,before)};const firstSym=(map.getStyle().layers.find(l=>l.type==='symbol')||{}).id;
+ // hybrid: vector roads drawn over imagery (only visible in satellite mode)
+ L({id:'hf-sat-roads',type:'line',source:S,'source-layer':'transportation',layout:{visibility:'none','line-join':'round','line-cap':'round'},
+   paint:{'line-color':['match',['get','class'],['motorway','trunk'],'#ffd54f',['primary','secondary'],'#fff3c4',['track','path'],'#e0b37a','#ffffff'],
+   'line-opacity':0.75,'line-width':['interpolate',['exponential',1.5],['zoom'],8,['match',['get','class'],['motorway','trunk','primary'],1.5,0.4],18,['match',['get','class'],['motorway','trunk','primary'],10,['track','path'],2,5]],
+   'line-dasharray':['match',['get','class'],['track','path'],['literal',[2,1.5]],['literal',[1,0]]]}},firstSym);
+ // Trails & backroads (OSM tracks/paths/unpaved, via OpenFreeMap OpenMapTiles)
+ L({id:'hf-trails-case',type:'line',source:S,'source-layer':'transportation',minzoom:9,filter:['any',['match',['get','class'],['track','path'],true,false],['==',['get','surface'],'unpaved']],layout:{visibility:'none','line-join':'round'},paint:{'line-color':'#fff','line-width':['interpolate',['linear'],['zoom'],9,1.5,16,6],'line-opacity':0.8}},firstSym);
+ L({id:'hf-trails',type:'line',source:S,'source-layer':'transportation',minzoom:9,filter:['any',['match',['get','class'],['track','path'],true,false],['==',['get','surface'],'unpaved']],layout:{visibility:'none','line-join':'round'},paint:{'line-color':['match',['get','class'],'path','#c62828','#8d5524'],'line-width':['interpolate',['linear'],['zoom'],9,0.8,16,3],'line-dasharray':[2,1.2]}},firstSym);
+}
+function setTrails(on){if(on)ensureLazy();trailsOn=on;settings.trails=on;saveSettings();['hf-trails-case','hf-trails'].forEach(l=>map.getLayer(l)&&map.setLayoutProperty(l,'visibility',on?'visible':'none'));$('#btnTrails').classList.toggle('on',on)}
+$('#btnTrails').onclick=()=>setTrails(!trailsOn);
+document.documentElement.classList.add('plain');
+map.on('load',()=>{addDetailLayers();if(trailsOn)setTrails(true)});
+
+/* ================= Water access ================= */
+const _waterCache=new Map();
+function loadWater(lon,lat){const k=lon.toFixed(4)+','+lat.toFixed(4);if(_waterCache.has(k))return _waterCache.get(k);
+ const p=(async()=>{const q=`(way["natural"="water"](around:3200,${lat},${lon});relation["natural"="water"](around:3200,${lat},${lon});way["waterway"~"^(river|stream|creek|canal|brook)$"](around:3200,${lat},${lon});nwr["leisure"="slipway"](around:16000,${lat},${lon});nwr["leisure"="fishing"](around:16000,${lat},${lon});nwr["fishing"~"yes|designated"](around:16000,${lat},${lon}););out geom center 300;`;
+  const nwis=`https://waterservices.usgs.gov/nwis/site/?format=rdb&siteType=GW&siteStatus=all&bBox=${(lon-.05).toFixed(4)},${(lat-.04).toFixed(4)},${(lon+.05).toFixed(4)},${(lat+.04).toFixed(4)}`;
+  const [ov,wl]=await Promise.all([overpass(q).catch(()=>null),getText(nwis).catch(e=>String(e.message).includes('404')?'':null)]);
+  const W={ok:!!ov,surf:[],access:[],wells:wl==null?null:wl===''?0:Math.max(0,wl.split('\n').filter(r=>r&&!r.startsWith('#')).length-2)};
+  if(ov){const me=[lon,lat];ov.elements.forEach(e=>{const t=e.tags||{};let d=null;
+    if(e.type==='way'&&e.geometry){d=t.natural==='water'&&inRing(me,e.geometry.map(g=>[g.lon,g.lat]))?0:distToLine(me,e.geometry.map(g=>[g.lon,g.lat]))}
+    else if(e.type==='relation'&&e.members){let best=1e9;e.members.forEach(m=>{if(m.geometry){const r=m.geometry.map(g=>[g.lon,g.lat]);best=Math.min(best,m.role==='outer'&&inRing(me,r)?0:distToLine(me,r))}});d=best<1e9?best:null}
+    else{const pt=elPt(e);if(pt)d=hav(me,pt)}
+    if(d==null)return;
+    if(t.leisure==='slipway'||t.leisure==='fishing'||t.fishing)W.access.push({name:t.name||'',kind:t.leisure==='slipway'?'boat ramp':'fishing access',d});
+    else{const kind=t.waterway||(t.water==='pond'||t.water==='reservoir'||t.water==='river'||t.water==='lake'?t.water:t.water||'lake/pond');W.surf.push({name:t.name||'',kind,d})}});
+   W.surf.sort((a,b)=>a.d-b.d);W.access.sort((a,b)=>a.d-b.d)}
+  return W})();_waterCache.set(k,p);p.catch(()=>_waterCache.delete(k));return p}
+function locM(o,p){const k=Math.cos(o[1]*Math.PI/180)*111320;return[(p[0]-o[0])*k,(p[1]-o[1])*110540]}
+function distToLine(pt,coords){let best=1e12;for(let i=0;i<coords.length;i++){const a=locM(pt,coords[i]),b=locM(pt,coords[Math.min(i+1,coords.length-1)]);const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let t=L?-(a[0]*dx+a[1]*dy)/L:0;t=Math.max(0,Math.min(1,t));const x=a[0]+t*dx,y=a[1]+t*dy;best=Math.min(best,Math.hypot(x,y))}return best}
+function nearestOnCoords(pt,coords){let best=null,bd=1e12;for(let i=0;i<coords.length-1;i++){const a=locM(pt,coords[i]),b=locM(pt,coords[i+1]);const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let t=L?-(a[0]*dx+a[1]*dy)/L:0;t=Math.max(0,Math.min(1,t));const d=Math.hypot(a[0]+t*dx,a[1]+t*dy);if(d<bd){bd=d;best=[coords[i][0]+t*(coords[i+1][0]-coords[i][0]),coords[i][1]+t*(coords[i+1][1]-coords[i][1])]}}return{d:bd,p:best}}
+function inRing(p,r){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
+function waterHTML(W,st){const sname=(STATES.find(s=>s[0]===st)||[])[1]||'your state';
+ const row=x=>`<div class="small">${x.d<30?'📍 <b>on/at this spot</b>':fmtMi(x.d)} – ${x.name?'<b>'+esc(x.name)+'</b>':'unnamed'} <span class="src">(${esc(x.kind)})</span></div>`;
+ const dedupe=a=>{const seen=new Set();return a.filter(x=>{const k=(x.name||x.kind)+Math.round(x.d/200);if(seen.has(k))return false;seen.add(k);return true})};
+ return `<b>Surface water within 2 mi</b>${!W.ok?'<div class="small">Unknown – OpenStreetMap/Overpass unreachable.</div>':W.surf.length?dedupe(W.surf).slice(0,8).map(row).join(''):'<div class="small">No creeks, rivers, lakes or ponds mapped in OSM within ~2 mi (small ponds/seasonal creeks are often unmapped).</div>'}
+ <b>Public water access (10 mi)</b>${!W.ok?'<div class="small">Unknown</div>':W.access.length?dedupe(W.access).slice(0,5).map(row).join(''):'<div class="small">No boat ramps or fishing access mapped within ~10 mi.</div>'}
+ <div><b>Wells:</b> ${W.wells==null?'unknown (USGS NWIS unreachable)':W.wells?W.wells+' USGS groundwater sites within ~3 mi':'no USGS groundwater sites within ~3 mi (check state well logs)'}</div>
+ <div><b>Irrigation / water rights:</b> <i>unknown</i> – there is no national dataset. Search “${esc(sname)} water rights” (state engineer / water resources agency) and ask the seller what rights convey.</div>
+ <div class="src">OpenStreetMap via Overpass (waterways, natural=water, leisure=slipway/fishing) · USGS NWIS. USGS NHD not queried (service too slow for mobile).</div>`}
+
+/* ================= Priorities / weighted fit score ================= */
+const FACTORS=[['remote','Solitude / remoteness'],['road','Road access'],['water','Water access'],['public','Public hunting land nearby'],['game','Game diversity'],['flood','Flood risk'],['fire','Fire risk'],['hospital','Distance to hospital'],['power','Power'],['slope','Slope / buildability'],['noise','Noise']];
+const PRESETS={Balanced:{remote:3,road:3,water:3,public:3,game:3,flood:3,fire:3,hospital:3,power:3,slope:3,noise:3},
+ 'Remote hunter':{remote:5,road:2,water:3,public:5,game:5,flood:2,fire:2,hospital:1,power:1,slope:2,noise:4},
+ 'Family-friendly':{remote:1,road:5,water:3,public:2,game:2,flood:5,fire:4,hospital:5,power:5,slope:4,noise:3}};
+settings.prio=settings.prio||{...PRESETS.Balanced};
+function computeScore(F){let num=0,den=0;const parts=[];FACTORS.forEach(([k,n])=>{const w=+settings.prio[k]||0;const f=F[k];
+  if(f==null){parts.push(`${n}: unknown (weight ${w}, ignored)`);return}if(!w){parts.push(`${n}: ${f.v>0?'+':''}${f.v.toFixed(2)} × weight 0 (off)`);return}
+  num+=w*f.v;den+=w;parts.push(`${n}: ${f.v>0?'+':''}${f.v.toFixed(2)} × weight ${w} – ${f.why}`)});
+ return{score:den?Math.round(50+50*num/den):50,parts}}
+function scoreReport(R){const pros=[],cons=[],warn=[],F={};const mi=d=>d/1609.344;const fv=(k,v,why)=>F[k]={v:Math.max(-1,Math.min(1,v)),why};
+ if(R.town===undefined)F.remote=null;else{const d=R.town?mi(R.town.d):99;
+  if(d>15){fv('remote',1,'>15 mi to a town');pros.push(`Remote: nearest town ${R.town?esc(R.town.name)+' '+fmtMi(R.town.d):'> 37 mi'}`)}else if(d>5){fv('remote',0.4,'5–15 mi to a town');pros.push(`Nearest town ${esc(R.town.name)} – ${fmtMi(R.town.d)}`)}else{fv('remote',-0.6,'within 5 mi of a town');cons.push(`Close to town (${esc(R.town.name)}, ${fmtMi(R.town.d)}) – more people, less solitude`)}}
+ if(R.pad==null)F.public=null;else{const open=R.pad.filter(p=>/OA|RA/.test(p.Pub_Access||''));
+  if(open.length){fv('public',Math.min(1,0.4+open.length*0.15),`${open.length} public-access area(s) within 5 mi`);pros.push('Public land within ~5 mi: '+open.slice(0,5).map(p=>`${esc(p.Unit_Nm)} (${esc(p.MngNm_Desc)}, ${p.Pub_Access==='OA'?'open':'restricted'} access)`).join('; '))}else{fv('public',-0.5,'no public-access land within 5 mi');cons.push('No public-access land (PAD-US) within ~5 mi')}}
+ if(R.game==null)F.game=null;else{const n=R.game.length;fv('game',n>=6?1:n>=3?0.5:n?0.2:-0.5,`${n} game species within 15 km`);(n?pros:cons).push(n?`Game species recorded: ${R.game.map(t=>esc(t.preferred_common_name)).join(', ')}`:'No game species recorded on iNaturalist nearby (could be under-reported)')}
+ if(R.road===undefined){F.road=null;warn.push('Road access unknown (OSM unreachable)')}else if(!R.road){fv('road',-1,'no mapped road within 400 m');warn.push('No mapped road within ~1/4 mi – possibly <b>landlocked</b>. Confirm legal deeded access/easement.')}else{fv('road',R.road.d<150?1:0.6,`road ${fmtMi(R.road.d)} away`);pros.push(`Road access: ${esc(R.road.name||R.road.tags.highway)} ${fmtMi(R.road.d)} away`)}
+ if(R.flood==null){F.flood=null;warn.push('FEMA flood zone unknown (NFHL unreachable)')}else{const z=R.flood.FLD_ZONE;if(/^(A|V)/.test(z)){fv('flood',-1,`FEMA zone ${z}`);warn.push(`<b>FEMA Special Flood Hazard Area: zone ${esc(z)}</b> – flood insurance likely required`)}else if(z==='none mapped'){F.flood=null;cons.push('No FEMA flood map at this point (unmapped ≠ safe)')}else{fv('flood',0.6,`FEMA zone ${z}`);pros.push(`FEMA flood zone ${esc(z)} ${esc(R.flood.ZONE_SUBTY||'')}`)}}
+ F.fire=null; // no free point API; user checks wildfirerisk.org
+ if(R.slope==null)F.slope=null;else if(R.slope>30){fv('slope',-1,`very steep ${R.slope}%`);cons.push(`Very steep (${R.slope}%) – hard to build`)}else if(R.slope<15){fv('slope',R.slope<8?1:0.5,`slope ${R.slope}%`);pros.push(`Buildable slope (${R.slope}%)`)}else{fv('slope',-0.3,`moderate slope ${R.slope}%`);cons.push(`Moderate slope (${R.slope}%) – grading likely`)}
+ if(R.hosp!==undefined){if(!R.hosp||mi(R.hosp.d)>40){fv('hospital',-1,'hospital >40 mi');warn.push('Nearest hospital '+(R.hosp?fmtMi(R.hosp.d)+' ('+esc(R.hosp.name)+')':'> 50 mi')+' – plan for emergencies')}else{fv('hospital',mi(R.hosp.d)<15?1:0.3,`hospital ${fmtMi(R.hosp.d)}`);pros.push(`Hospital: ${esc(R.hosp.name)} ${fmtMi(R.hosp.d)}`)}}else{F.hospital=null;warn.push('Hospital distance unknown')}
+ if(R.fuel!==undefined)(R.fuel?(mi(R.fuel.d)>25?cons:pros):cons).push(R.fuel?`Fuel: ${esc(R.fuel.name||'station')} ${fmtMi(R.fuel.d)}`:'No fuel station within 25 mi');
+ if(R.power!==undefined){if(R.power&&mi(R.power.d)<0.5){fv('power',1,`power line ${fmtMi(R.power.d)}`);pros.push(`Power line ${fmtMi(R.power.d)} away (mapped in OSM)`)}else{fv('power',-0.5,'no power line mapped within ½ mi');cons.push('No power line mapped within '+(R.power?fmtMi(R.power.d):'~2 mi')+' – consider solar/generator; small lines often unmapped')}}else{F.power=null;cons.push('Power distance unknown')}
+ // water
+ const W=R.water;if(!W||!W.ok){F.water=null;cons.push('Surface water unknown (OSM unreachable)')}else{const s=W.surf[0],a=W.access[0];let v=0,why=[];
+  if(s&&s.d<30){v=1;why.push('water on/at the spot');pros.push(`Water on/at this spot: ${esc(s.name||s.kind)}`)}else if(s&&s.d<1609){v=0.7;why.push(`water ${fmtMi(s.d)}`);pros.push(`Surface water ${fmtMi(s.d)} away: ${esc(s.name||'unnamed')} (${esc(s.kind)})`)}else{v=-0.6;why.push('no surface water within 1 mi');cons.push('No surface water mapped within ~1 mi'+(s?` (nearest ${esc(s.name||s.kind)} ${fmtMi(s.d)})`:''))}
+  if(a&&a.d<8000){v+=0.2;why.push(`${a.kind} ${fmtMi(a.d)}`);pros.push(`Public ${esc(a.kind)} ${fmtMi(a.d)} away${a.name?': '+esc(a.name):''}`)}
+  if(W.wells)v+=0.1;fv('water',v,why.join(', '))}
+ if(R.wells==null)cons.push('Wells: unknown (USGS NWIS unreachable)');else if(R.wells>0)pros.push(`${R.wells} USGS groundwater sites within ~3 mi (groundwater exists in area)`);else cons.push('No USGS groundwater sites within ~3 mi – check state well logs');
+ warn.push('Irrigation/water rights: <i>unknown</i> (no national data) – check the state water-rights agency.');
+ const noise=[R.hwy&&`highway ${esc(R.hwy.name)} ${fmtMi(R.hwy.d)}`,R.air&&`airport/airstrip ${esc(R.air.name)} ${fmtMi(R.air.d)}`,R.range&&`shooting range ${esc(R.range.name)} ${fmtMi(R.range.d)}`].filter(Boolean);
+ if(R.ovOK){if(noise.length){fv('noise',-0.4*noise.length,`${noise.length} noise source(s)`);cons.push('Noise sources: '+noise.join('; '))}else{fv('noise',0.8,'no highways/airports/ranges nearby');pros.push('No highways (5 mi), airports (6 mi) or ranges (5 mi) mapped nearby')}}else F.noise=null;
+ const C=computeScore(F);return{score:Math.max(0,Math.min(100,C.score)),pros,cons,warn,parts:C.parts,F}}
+const _repCache=new Map();
+function getReport(lon,lat){const k=lon.toFixed(5)+','+lat.toFixed(5);if(!_repCache.has(k)){const p=gatherReport(lon,lat);_repCache.set(k,p);p.catch(()=>_repCache.delete(k))}return _repCache.get(k)}
+let lastRep=null;
+function prioPanelHTML(){return `<div id="prioPanel"><div class="btns">${Object.keys(PRESETS).map(p=>`<button data-preset="${p}">${p}</button>`).join('')}</div>
+ ${FACTORS.map(([k,n])=>`<label class="prow"><span>${n}</span><input type="range" min="0" max="5" step="1" data-prio="${k}" value="${settings.prio[k]??3}"><b id="pv-${k}">${settings.prio[k]??3}</b></label>`).join('')}<div class="small">0 = off. Score = 50 + 50 × Σ(weight × factor)/Σ(weights of known factors).</div></div>`}
+function wirePrio(root){root.querySelectorAll('[data-prio]').forEach(i=>i.oninput=()=>{settings.prio[i.dataset.prio]=+i.value;saveSettings();const b=root.querySelector('#pv-'+i.dataset.prio);if(b)b.textContent=i.value;prioChanged()});
+ root.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{settings.prio={...PRESETS[b.dataset.preset]};saveSettings();root.querySelectorAll('[data-prio]').forEach(i=>{i.value=settings.prio[i.dataset.prio];const v=root.querySelector('#pv-'+i.dataset.prio);if(v)v.textContent=i.value});prioChanged()})}
+function prioChanged(){if(lastRep&&document.getElementById('fitScore'))renderReport(lastRep);if(document.getElementById('slTable'))openShortlist();
+ shortlist.forEach(s=>{if(s.R){s.score=scoreReport(s.R).score}})}
+function openPriorities(){showSheet(`<h2>⚖️ My Priorities</h2>${prioPanelHTML()}`);wirePrio($('#sheetBody'))}
+
+/* ================= Shortlist ================= */
+let shortlist=[],history_=[];
+async function loadLists(){try{shortlist=(await DB.all('shortlist')).sort((a,b)=>a.order-b.order);history_=(await DB.all('history')).sort((a,b)=>b.t-a.t)}catch(e){}}
+let curCtx=null;
+function slButton(){return `<button class="slAdd">⭐ Add to shortlist</button>`}
+document.addEventListener('click',e=>{if(e.target.closest('.slAdd')&&curCtx){addToShortlist(curCtx);e.target.closest('.slAdd').textContent='⭐ On shortlist ✓'}});
+async function addToShortlist(c){let s=shortlist.find(x=>Math.abs(x.lon-c.lon)<1e-5&&Math.abs(x.lat-c.lat)<1e-5);
+ if(!s){s={id:uid(),lon:c.lon,lat:c.lat,name:c.name,price:c.price??null,acres:c.acres??null,order:shortlist.length,deal:c.listing?(()=>{const D=dealInfo(c.listing);return{score:D.score,badges:D.badges}})():null,R:null,score:null,t:Date.now()};shortlist.push(s);await DB.put('shortlist',s).catch(()=>{})}
+ if(!s.R&&navigator.onLine)getReport(s.lon,s.lat).then(async R=>{s.R=R;s.score=scoreReport(R).score;await DB.put('shortlist',s).catch(()=>{});if(document.getElementById('slTable'))openShortlist()}).catch(()=>{});return s}
+function metrics(s){const R=s.R;if(!R)return{};const S=scoreReport(R);const W=R.water;const open=R.pad?R.pad.filter(p=>/OA|RA/.test(p.Pub_Access||'')).length:null;
+ return{score:S.score,town:R.town===undefined?'?':R.town?fmtMi(R.town.d):'>37 mi',water:!W||!W.ok?'?':W.surf[0]?(W.surf[0].d<30?'on spot':fmtMi(W.surf[0].d)):'none ≤2 mi',
+  pub:open==null?'?':open?open+' area(s)':'none',road:R.road===undefined?'?':R.road?fmtMi(R.road.d):'none mapped',flood:R.flood==null?'?':R.flood.FLD_ZONE,power:R.power===undefined?'?':R.power?fmtMi(R.power.d):'>2 mi',game:R.game==null?'?':R.game.length}}
+function openShortlist(){const rows=[['Fit score','score'],['Price','price'],['Acres','acres'],['To town','town'],['Water','water'],['Public land','pub'],['Road access','road'],['Flood zone','flood'],['Power','power'],['Game species','game'],['Deal score','deal']];
+ const M=shortlist.map(s=>({s,m:metrics(s)}));
+ showSheet(`<h2>⭐ Shortlist (${shortlist.length})</h2>${shortlist.length?`<div class="btns"><button id="slSort">Sort by fit score</button><button id="slPrio">⚖️ Priorities</button></div>
+ <div class="slwrap"><table id="slTable"><tr><th></th>${M.map(({s},i)=>`<th data-sl="${s.id}"><a class="slgo" data-go="${s.id}">${esc(s.name||'Spot')}</a><div class="slctl"><button data-mv="-1" data-id="${s.id}" ${i?'':'disabled'}>◀</button><button data-mv="1" data-id="${s.id}" ${i<M.length-1?'':'disabled'}>▶</button><button data-rm="${s.id}">✕</button></div></th>`).join('')}</tr>
+ ${rows.map(([n,k])=>`<tr><td class="rh">${n}</td>${M.map(({s,m})=>`<td class="c-${k}">${k==='deal'?(s.deal?(s.deal.score==null?'not enough data':s.deal.score+'/100 '+esc(s.deal.badges.join(', '))):'—'):k==='price'?(s.price!=null?money(s.price):'—'):k==='acres'?(s.acres!=null?(+s.acres).toFixed(2):'—'):s.R?esc(m[k]):'<span class="small">…</span>'}</td>`).join('')}</tr>`).join('')}</table></div>`:'<div class="small">Nothing yet. Open any pin, listing or point and tap “⭐ Add to shortlist”.</div>'}`);
+ const sb=$('#sheetBody');
+ sb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async()=>{shortlist=shortlist.filter(x=>x.id!==b.dataset.rm);await DB.del('shortlist',b.dataset.rm).catch(()=>{});await reorderSave();openShortlist()});
+ sb.querySelectorAll('[data-mv]').forEach(b=>b.onclick=async()=>{const i=shortlist.findIndex(x=>x.id===b.dataset.id),j=i+ +b.dataset.mv;if(j<0||j>=shortlist.length)return;[shortlist[i],shortlist[j]]=[shortlist[j],shortlist[i]];await reorderSave();openShortlist()});
+ sb.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>{const s=shortlist.find(x=>x.id===a.dataset.go);map.flyTo({center:[s.lon,s.lat],zoom:15});openPoint(s.lon,s.lat)});
+ const so=$('#slSort');if(so)so.onclick=async()=>{shortlist.sort((a,b)=>(metrics(b).score??-1)-(metrics(a).score??-1));await reorderSave();openShortlist()};
+ const sp=$('#slPrio');if(sp)sp.onclick=openPriorities;
+ shortlist.filter(s=>!s.R).forEach(s=>addToShortlist(s))}
+async function reorderSave(){shortlist.forEach((s,i)=>s.order=i);for(const s of shortlist)await DB.put('shortlist',s).catch(()=>{})}
+
+/* ================= Recently viewed ================= */
+async function recordHistory(lon,lat,name,listing){const id=lon.toFixed(5)+','+lat.toFixed(5);let h=history_.find(x=>x.id===id);
+ if(h){h.t=Date.now();h.name=name||h.name;if(listing)h.listing=listing}else{h={id,lon,lat,name:name||'Point',t:Date.now(),score:null,listing:listing||null};history_.unshift(h)}
+ history_.sort((a,b)=>b.t-a.t);const drop=history_.splice(50);await DB.put('history',h).catch(()=>{});for(const d of drop)await DB.del('history',d.id).catch(()=>{})}
+async function historyScore(lon,lat,score){const h=history_.find(x=>x.id===lon.toFixed(5)+','+lat.toFixed(5));if(h){h.score=score;await DB.put('history',h).catch(()=>{})}}
+function openRecent(){showSheet(`<h2>🕘 Recently viewed</h2>${history_.length?`<div class="btns"><button id="hClear" style="background:#c62828">Clear history</button></div>`+history_.map(h=>`<div class="hrow" data-h="${h.id}"><div class="hmain" data-open="${h.id}"><b>${esc(h.name)}</b>${h.score!=null?` <span class="hs">${h.score}/100</span>`:''}<div class="small">${h.lat.toFixed(4)}, ${h.lon.toFixed(4)} · ${new Date(h.t).toLocaleString()}</div></div><button class="hx" data-hx="${h.id}">×</button></div>`).join(''):'<div class="small">No history yet. Places you open appear here (stored only on this phone).</div>'}`);
+ const sb=$('#sheetBody');
+ sb.querySelectorAll('[data-open]').forEach(d=>d.onclick=()=>{const h=history_.find(x=>x.id===d.dataset.open);map.flyTo({center:[h.lon,h.lat],zoom:15});openPoint(h.lon,h.lat,h.listing||undefined)});
+ const rm=async id=>{history_=history_.filter(x=>x.id!==id);await DB.del('history',id).catch(()=>{});openRecent()};
+ sb.querySelectorAll('[data-hx]').forEach(b=>b.onclick=e=>{e.stopPropagation();rm(b.dataset.hx)});
+ sb.querySelectorAll('.hrow').forEach(r=>{let x0=null;r.addEventListener('touchstart',e=>x0=e.touches[0].clientX,{passive:true});r.addEventListener('touchend',e=>{if(x0!=null&&x0-e.changedTouches[0].clientX>70)rm(r.dataset.h);x0=null})});
+ const c=$('#hClear');if(c)c.onclick=async()=>{if(!confirm('Clear all recently viewed places?'))return;history_=[];await DB.clear('history').catch(()=>{});openRecent()}}
+const PANELS={shortlist:()=>openShortlist(),recent:()=>openRecent(),prio:()=>openPriorities()};
+
+/* ================= Fish in the Wild Game layer ================= */
+// verified via api.inaturalist.org/v1/taxa
+const FISH_TAXA={49589:'Black bass',49597:'Char / brook & lake trout',47522:'Trout & Pacific salmon',47518:'Brown Trout',58655:'Catfish',49595:'Crappie',49592:'Bluegill & sunfish',48154:'Walleye',51370:'Pike & muskie',58627:'Yellow Perch',53912:'Carp',49825:'Sturgeon',54545:'Gar',51392:'Striped Bass'};
+const FISH_IDS=Object.keys(FISH_TAXA).map(Number);
+const fishGroup=t=>{if(!t)return null;const ids=[t.id,...(t.ancestor_ids||[])];return FISH_IDS.find(g=>ids.includes(g))||null};
+let fishMarkers=[],fishReq=0;
+function waterFeatures(){const out=[];const add=(f,poly)=>{const g=f.geometry;const lines=g.type==='Polygon'?g.coordinates:g.type==='MultiPolygon'?g.coordinates.flat():g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];if(lines.length)out.push({lines,poly,name:f.properties.name||f.properties['name:en']||'',cls:f.properties.class||'water',g})};
+ try{map.querySourceFeatures('openmaptiles',{sourceLayer:'water'}).forEach(f=>add(f,true));map.querySourceFeatures('openmaptiles',{sourceLayer:'waterway'}).forEach(f=>add(f,false))}catch(e){}
+ let names=[];try{names=map.querySourceFeatures('openmaptiles',{sourceLayer:'water_name'})}catch(e){}
+ return{out,names}}
+function snapToWater(pt,WF){let best=null;for(const w of WF.out){let inside=false;if(w.poly&&w.g.type==='Polygon')inside=inRing(pt,w.g.coordinates[0]);
+  for(const l of w.lines){const r=nearestOnCoords(pt,l);const d=inside?0:r.d;if(r.p&&(!best||d<best.d))best={d,p:inside?pt:r.p,w}}}
+ if(!best||best.d>100)return null;let name=best.w.name;
+ if(!name){let bd=1e9;WF.names.forEach(n=>{const g=n.geometry;const c=g.type==='Point'?g.coordinates:g.type==='LineString'?g.coordinates[Math.floor(g.coordinates.length/2)]:null;if(!c)return;const d=hav(pt,c);if(d<bd&&d<2500){bd=d;name=n.properties.name}})}
+ return{p:best.p,name:name||('Unnamed '+(best.w.cls==='river'?'river':best.w.cls==='stream'?'creek':best.w.poly?'pond/lake':'stream')),key:(name||best.w.cls)+'|'+(name?'':best.p.map(v=>v.toFixed(3)).join(','))}}
+function renderFish(){if(!gameOn||settings.fish===false){syncMarkers(fishMk,new Map());fishMarkers=[];return 0}
+ if(map.getZoom()<10){const ar=viewBox(0.6),W=new Map();fishMk.forEach((m,k)=>{const l=m.getLngLat();if(inBox([l.lng,l.lat],ar))W.set(k,{sig:m.__sig})});syncMarkers(fishMk,W,()=>null);fishMarkers=[...fishMk.values()];return countIn(fishMk)}
+ const area=viewBox(0.6);const WF=waterFeatures();const bodies=new Map();
+ fishObs.forEach(o=>{const c=o.geojson.coordinates;if(!inBox(c,area))return;let s=snapCache.get(o.id);if(!s){s=snapToWater(c,WF);if(s)snapCache.set(o.id,s);else return}
+  const g=fishGroup(o.taxon);const B=bodies.get(s.key)||{name:s.name,p:s.p,sp:new Map()};bodies.set(s.key,B);const S=B.sp.get(g)||{g,n:0,latest:o,photo:o.taxon.default_photo||o.photos?.[0]};S.n++;if((o.observed_on||'')>(S.latest.observed_on||''))S.latest=o;B.sp.set(g,S)});
+ const W=new Map();bodies.forEach((B,k)=>{const sp=[...B.sp.values()].sort((a,b)=>b.n-a.n);
+  const inner=`<div class="fimgs">${sp.slice(0,3).map(s=>`<div class="fimg" style="background-image:url('${esc(s.photo?.square_url||s.photo?.url||'')}')"></div>`).join('')}${sp.length>3?`<div class="fmore">+${sp.length-3}</div>`:''}</div><div class="flab">🎣 ${esc(B.name)}</div>`;
+  const html=`<div class="gpop fpop"><b>🎣 ${esc(B.name)}</b>${sp.map(s=>{const o=s.latest;return `<div class="frow"><img src="${esc((s.photo?.square_url||s.photo?.url||'').replace('square','small'))}" alt=""><div><b>${esc(FISH_TAXA[s.g])}</b><div class="small">${esc(o.taxon.preferred_common_name||o.taxon.name)}</div><div>${s.n} verified observation${s.n==1?'':'s'} · latest ${esc(o.observed_on||'?')}</div><div class="src">Observed by ${esc(o.user?(o.user.name||o.user.login):'?')} · Photo ${esc(s.photo?.attribution||o.photos?.[0]?.attribution||'')}</div></div></div>`}).join('')}<div class="src">iNaturalist research grade · snapped to water within 100 m</div></div>`;
+  W.set(k,{ll:B.p,sig:inner,html,inner})});
+ // keep bodies that are merely out of the loaded tile area (no flicker): only remove if far away
+ fishMk.forEach((m,k)=>{if(!W.has(k)){const l=m.getLngLat();if(inBox([l.lng,l.lat],area))W.set(k,{ll:[l.lng,l.lat],sig:m.__sig,html:m.__html,inner:''})}});
+ syncMarkers(fishMk,W,w=>{const el=document.createElement('div');el.className='fishpin';el.innerHTML=w.inner;const pop=new maplibregl.Popup({offset:24,maxWidth:'270px'}).setHTML(w.html);const mk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(w.ll).setPopup(pop).addTo(map);mk.__html=w.html;el.addEventListener('click',ev=>{ev.stopPropagation();const pp=mk.getPopup();pp.setHTML(mk.__html||w.html);if(!pp.isOpen())pp.setLngLat(mk.getLngLat()).addTo(map)});return mk});
+ fishMarkers=[...fishMk.values()];return countIn(fishMk)}
+function countIn(M){const v=viewBox(0);let n=0;M.forEach(m=>{const l=m.getLngLat();if(inBox([l.lng,l.lat],v))n++});return n}
+async function updateFish(){return renderFish()}
+
+/* ================= Welcome ================= */
+function showWelcome(force){if(!force&&localStorage.getItem('hf-welcomed'))return;const w=document.createElement('div');w.id='welcome';
+ w.innerHTML=`<div class="wpanel"><div style="font-size:40px">🏕</div><h1>Know the land before you drive out.</h1>
+ <p><b>The Getaway Report</b> turns any spot on the map into a hunting-getaway fit score in seconds: public hunting land nearby, verified game sightings, water, road access, flood zone, power, slope, noise and hospital distance – with honest pros, cons and red flags, weighted by <b>your</b> priorities.</p>
+ <ul><li>Tap or press-and-hold anywhere → <b>🏕 Getaway Report</b></li><li>🦌 Wild Game & 🎣 fish from verified observations</li><li>⭐ Shortlist & compare, 🏷️ live listings (with a free key)</li><li>3D satellite terrain, trails & backroads, offline pins</li></ul>
+ <button id="welcomeGo">Start exploring</button></div>`;document.body.appendChild(w);
+ $('#welcomeGo').onclick=()=>{localStorage.setItem('hf-welcomed','1');w.remove()}}
+
+loadLists();
+
+/* ===== Layers drawer + coordinates readout ===== */
+(()=>{const c=document.createElement('div');c.id='coords';document.body.appendChild(c);
+ const upd=()=>{const m=map.getCenter();c.textContent=`${m.lat.toFixed(5)}, ${m.lng.toFixed(5)} · z${map.getZoom().toFixed(1)}`};map.on('move',upd);upd()})();
+function openLayers(){let d=$('#layers');if(d)d.remove();d=document.createElement('div');d.id='layers';
+ const card=(id,label,th,on)=>`<div class="lcard ${on?'on':''}" data-l="${id}"><div class="th" style="${th}"></div>${label}</div>`;
+ d.innerHTML=`<div class="panel"><b style="font-size:18px">Map Layers</b><button id="layersClose" style="float:right;border:0;background:#2e353b;color:#fff;border-radius:50%;width:30px;height:30px">✕</button>
+ <h4>Basemap</h4><div class="lgrid">${card('street','Street','background:linear-gradient(135deg,#f3efe6,#dfe9d8);',!satOn)}${card('hybrid','Hybrid','background:linear-gradient(135deg,#3b4a2c,#6d7a4d);',satOn)}${card('topo','Topo overlay','background:repeating-radial-gradient(circle,#e9e1c9 0 6px,#b8a77a 7px 8px);',topoOn)}</div>
+ <h4>Hunting</h4><div class="lgrid">${card('game','Wild Game & Fish','background:#4a3416;font-size:26px;" data-i="🦌',gameOn)}${settings.rcKey?card('sale','For Sale','background:#3d2a12;" data-i="🏷️',saleOn):''}${card('trails','Trails & backroads','background:#2b2117;" data-i="🥾',trailsOn)}</div>
+ <h4>View</h4><div class="lgrid">${card('3d','3D terrain','background:#22303a;" data-i="⛰️',terrainOn)}${card('explore','Explore orbit','background:#22303a;" data-i="🎥',exploreOn)}</div></div>`;
+ d.querySelectorAll('.th[data-i]').forEach(t=>t.textContent=t.dataset.i);
+ document.body.appendChild(d);d.onclick=e=>{if(e.target===d)d.remove()};$('#layersClose').onclick=()=>d.remove();
+ const act={street:()=>setSat(false),hybrid:()=>setSat(true),topo:()=>$('#btnTopo').click(),game:()=>$('#btnGame').click(),sale:()=>$('#btnSale').click(),trails:()=>setTrails(!trailsOn),'3d':()=>setTerrain(!terrainOn),explore:()=>$('#btnExplore').click()};
+ d.querySelectorAll('[data-l]').forEach(c=>c.onclick=()=>{act[c.dataset.l]();openLayers()})}
+$('#btnLayers').onclick=openLayers;
+
+/* ================= Deal Finder + property types ================= */
+let saleList=[],dealsOnly=settings.dealsOnly===true,typeFilter=settings.typeFilter||'All';
+const PTYPES={'Hunting land':'🦌','Recreational':'🏕','Farm/Ranch':'🌾','Timber':'🌲','Cabin':'🛖','Lot':'📐','House':'🏠'};
+function landCover(l){try{const p=map.project([l.longitude,l.latitude]);const f=map.queryRenderedFeatures([[p.x-3,p.y-3],[p.x+3,p.y+3]]).filter(f=>f.sourceLayer==='landcover'||f.sourceLayer==='landuse');return f.map(x=>x.properties.class||x.properties.subclass).join(' ')}catch(e){return''}}
+const _clsCache=new Map();function classify(l){const ck=(l.id||l.formattedAddress)+'|'+l.lotSize;if(_clsCache.has(ck))return _clsCache.get(ck);const r=classify0(l);_clsCache.set(ck,r);return r}
+function classify0(l){const ac=l.lotSize?l.lotSize/43560:null;const t=(l.propertyType||'').toLowerCase();const lc=l._lc!=null?l._lc:(l._lc=landCover(l));
+ if(/land/.test(t)){if(ac!=null&&ac<1)return'Lot';if(/wood|forest/.test(lc)&&ac>=10)return'Timber';if(/farm|grass|meadow/.test(lc)&&ac>=20)return'Farm/Ranch';if(ac!=null&&ac>=10)return'Hunting land';return'Recreational'}
+ if(/farm|ranch/.test(t))return'Farm/Ranch';
+ if(ac!=null&&ac>=5)return/farm|grass|meadow/.test(lc)?'Farm/Ranch':/wood|forest/.test(lc)?'Cabin':'Farm/Ranch';
+ if(/manufactured|mobile/.test(t)&&ac>=1)return'Cabin';return'House'}
+const median=a=>{a=a.filter(x=>x!=null&&isFinite(x)).sort((x,y)=>x-y);if(!a.length)return null;const m=a.length>>1;return a.length%2?a[m]:(a[m-1]+a[m])/2};
+function priceCut(l){const h=l.history;if(!h||typeof h!=='object')return null;const ev=Object.entries(h).map(([d,v])=>({d,p:v&&v.price})).filter(x=>x.p).sort((a,b)=>a.d<b.d?-1:1);if(ev.length<2)return{known:true,cut:false};const prev=Math.max(...ev.slice(0,-1).map(x=>x.p));const cur=l.price||ev[ev.length-1].p;return{known:true,cut:prev>cur,from:prev,pct:prev>cur?Math.round((prev-cur)/prev*100):0}}
+const avmCache=JSON.parse(localStorage.getItem('hf-avm')||'{}');
+function dealInfo(l,list){list=list||saleList;const out={badges:[],why:[],score:null};const ac=l.lotSize?l.lotSize/43560:null;
+ const ppa=ac&&l.price?l.price/ac:null;const comps=list.filter(x=>x!==l&&x.price&&x.lotSize);const mA=median(comps.map(x=>x.price/(x.lotSize/43560)));
+ out.ppa=ppa;out.nA=comps.length;
+ const sq=list.filter(x=>x!==l&&x.price&&x.squareFootage);const mS=median(sq.map(x=>x.price/x.squareFootage));out.ppsf=l.squareFootage&&l.price?l.price/l.squareFootage:null;out.nS=sq.length;
+ let s=50,known=0;
+ if(ppa!=null&&comps.length>=3&&mA){out.vsA=Math.round((ppa-mA)/mA*100);known++;s+=Math.max(-20,Math.min(25,-out.vsA*0.5));out.why.push(`$/acre ${money(Math.round(ppa))} vs area median ${money(Math.round(mA))} (${out.vsA>0?'+':''}${out.vsA}%, n=${comps.length})`);if(out.vsA<=-20)out.badges.push(`${-out.vsA}% under area $/acre`)}else out.why.push(`$/acre vs area: not enough data (${ppa==null?'no lot size':'n='+comps.length+' comps, need 3'})`);
+ if(out.ppsf!=null&&sq.length>=3&&mS){out.vsS=Math.round((out.ppsf-mS)/mS*100);known++;s+=Math.max(-15,Math.min(15,-out.vsS*0.3));out.why.push(`$/sqft ${money(Math.round(out.ppsf))} vs median ${money(Math.round(mS))} (${out.vsS>0?'+':''}${out.vsS}%, n=${sq.length})`)}else out.why.push(`$/sqft vs area: not enough data`);
+ if(l.daysOnMarket!=null){known++;if(l.daysOnMarket>=90){s+=8;out.badges.push('Long DOM');out.why.push(`${l.daysOnMarket} days on market – seller may negotiate (+8)`)}else out.why.push(`${l.daysOnMarket} days on market`)}else out.why.push('Days on market: not enough data');
+ const pc=priceCut(l);if(pc&&pc.known){known++;if(pc.cut){s+=10;out.badges.push('Price cut');out.why.push(`Price cut ${pc.pct}% from ${money(pc.from)} (+10)`)}else out.why.push('No price cuts in listing history')}else out.why.push('Price-cut history: not enough data');
+ const av=avmCache[l.id||l.formattedAddress];if(av&&av.price){const d=Math.round((av.price-l.price)/av.price*100);out.avm=av.price;out.vsAvm=d;known++;s+=Math.max(-20,Math.min(25,d*0.8));out.why.push(`RentCast value estimate ${money(av.price)} – listing is ${d>=0?d+'% under':(-d)+'% over'} estimate`);if(d>=10)out.badges.push(`${d}% under estimate`)}else out.why.push('Value estimate: not fetched (tap “Get value estimate”, uses 1 API call)');
+ out.score=known>=2?Math.round(Math.max(0,Math.min(100,s))):null;if(out.score==null)out.why.unshift('Not enough data for a deal score (need ≥2 signals)');return out}
+async function fetchAvm(l){const k=l.id||l.formattedAddress;const c=avmCache[k];if(c&&Date.now()-c.t<864e5)return c;
+ const j=await getJSON(`https://api.rentcast.io/v1/avm/value?address=${encodeURIComponent(l.formattedAddress)}${l.propertyType?'&propertyType='+encodeURIComponent(l.propertyType):''}`,{headers:{'X-Api-Key':settings.rcKey,Accept:'application/json'}},20000);
+ avmCache[k]={price:j&&j.price||null,lo:j&&j.priceRangeLow,hi:j&&j.priceRangeHigh,t:Date.now()};localStorage.setItem('hf-avm',JSON.stringify(avmCache));return avmCache[k]}
+function dealHTML(l){const D=dealInfo(l);return `<div id="dealBox"><div style="font-size:20px;font-weight:700">${D.score==null?'Deal score: not enough data':'Deal score '+D.score+'/100'}</div>
+ <div>${D.badges.map(b=>`<span class="badge">${esc(b)}</span>`).join('')}</div><ul class="small">${D.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
+ ${settings.rcKey&&!avmCache[l.id||l.formattedAddress]?`<div class="btns"><button id="avmBtn">Get value estimate (1 API call)</button></div>`:''}<div class="src">Computed from RentCast listings in view; comps are active listings, not sales.</div></div>`}
+function wireDeal(l){const b=$('#avmBtn');if(b)b.onclick=async()=>{b.textContent='Fetching…';try{await fetchAvm(l);$('#dealBox').outerHTML=dealHTML(l);wireDeal(l);renderSalePins()}catch(e){b.textContent='Value estimate unavailable ('+e.message+')'}}}
+const listingMk=new Map();
+function renderSalePins(){if(!saleOn){syncMarkers(listingMk,new Map());listingMarkers=[];return 0}const mode=settings.mode||'sale';
+ saleList.forEach(l=>{l._type=classify(l);l._deal=dealInfo(l)});
+ const shown=saleList.filter(l=>(typeFilter==='All'||l._type===typeFilter)&&(!dealsOnly||(l._deal.score!=null&&l._deal.score>=60)));const W=new Map();
+ shown.forEach(l=>{const isDeal=l._deal.score!=null&&l._deal.score>=60;const inner=`<div class="pricepin">${PTYPES[l._type]||''} ${short$(l.price||0)}${mode==='rent'?'/mo':''}</div><div class="lstem"></div><div class="ldot"></div>`;
+  W.set((l.id||l.formattedAddress||l.latitude+','+l.longitude)+'|'+mode,{l,isDeal,inner,sig:inner+isDeal+l._type})});
+ syncMarkers(listingMk,W,w=>{const el=document.createElement('div');el.className='lpin'+(w.isDeal?' deal':'');el.dataset.type=w.l._type;el.innerHTML=w.inner;
+  el.onclick=ev=>{ev.stopPropagation();openPoint(w.l.longitude,w.l.latitude,w.l)};return new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([w.l.longitude,w.l.latitude]).addTo(map)});
+ listingMarkers=[...listingMk.values()];renderChips();scheduleDeclutter();return shown.length}
+function renderChips(){let c=$('#chips');if(!c){c=document.createElement('div');c.id='chips';document.body.appendChild(c)}
+ c.classList.toggle('hidden',!saleOn||!settings.rcKey);
+ c.innerHTML=`<button data-chip="deals" class="${dealsOnly?'on':''}" id="btnDeals">💰 Deals only</button><button id="btnDealList">📊 Deals list</button>`+['All',...Object.keys(PTYPES)].map(t=>`<button data-chip="${t}" class="${typeFilter===t?'on':''}">${PTYPES[t]||''} ${t}</button>`).join('');
+ c.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>{if(b.dataset.chip==='deals'){dealsOnly=!dealsOnly;settings.dealsOnly=dealsOnly}else{typeFilter=b.dataset.chip;settings.typeFilter=typeFilter}saveSettings();renderSalePins()});
+ $('#btnDealList').onclick=()=>openDeals('score')}
+function openDeals(by){saleList.forEach(l=>{l._type=l._type||classify(l);l._deal=dealInfo(l)});const key={score:l=>-(l._deal.score??-1),avm:l=>(l._deal.vsAvm!=null?-l._deal.vsAvm:1e9),ppa:l=>(l._deal.vsA??1e9),dom:l=>-(l.daysOnMarket??-1),price:l=>l.price||1e12}[by];
+ const L=[...saleList].sort((a,b)=>key(a)-key(b));
+ showSheet(`<h2>💰 Deals in view (${L.length})</h2><div class="btns">${[['score','Deal score'],['ppa','$/acre vs area'],['avm','vs estimate'],['dom','Days on market'],['price','Price']].map(([k,n])=>`<button data-sort="${k}" style="${k===by?'outline:2px solid #fff':''}">${n}</button>`).join('')}</div>
+ ${L.length?L.map((l,i)=>`<div class="drow" data-di="${saleList.indexOf(l)}"><b>${l._deal.score==null?'—':l._deal.score}</b> ${PTYPES[l._type]} <b>${money(l.price)}</b> · ${esc(l.formattedAddress||'')}<div class="small">${l.lotSize?(l.lotSize/43560).toFixed(1)+' ac · ':''}${l._deal.vsA!=null?(l._deal.vsA>0?'+':'')+l._deal.vsA+'% $/ac vs area · ':''}${l.daysOnMarket!=null?l.daysOnMarket+' DOM':''} ${l._deal.badges.map(b=>`<span class="badge">${esc(b)}</span>`).join('')}</div></div>`).join(''):'<div class="small">No listings loaded. Turn on For Sale and zoom to an area.</div>'}`);
+ document.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>openDeals(b.dataset.sort));
+ document.querySelectorAll('[data-di]').forEach(d=>d.onclick=()=>{const l=saleList[+d.dataset.di];map.flyTo({center:[l.longitude,l.latitude],zoom:14});openPoint(l.longitude,l.latitude,l)})}
+
+/* ================= Declutter: clustering, priority, focus, density ================= */
+const LAYERS=[{k:'deals',n:'💰 Deals',pr:4},{k:'listings',n:'🏷️ Listings',pr:3},{k:'game',n:'🦌 Game',pr:2},{k:'fish',n:'🎣 Fish',pr:1}];
+let focusLayer=null,soloLayer=null,declTimer=null;
+function layerOf(m){const el=m.getElement();if(el.classList.contains('lpin'))return el.classList.contains('deal')?'deals':'listings';if(el.classList.contains('gamepin'))return'game';if(el.classList.contains('fishpin'))return'fish';return null}
+function activeLayers(){const s=new Set();[...listingMarkers,...gameMarkers,...fishMarkers].forEach(m=>s.add(layerOf(m)));return LAYERS.filter(l=>s.has(l.k))}
+function setFocus(k){focusLayer=k;scheduleDeclutter()}
+function declutter(){const all=[...listingMarkers,...gameMarkers,...fishMarkers];const W=innerWidth,H=innerHeight;
+ const WS=512*Math.pow(2,Math.floor(map.getZoom()));const items=all.map(m=>{const el=m.getElement();const k=layerOf(m);const mc=maplibregl.MercatorCoordinate.fromLngLat(m.getLngLat());const p={x:mc.x*WS,y:mc.y*WS};return{m,el,k,pr:(LAYERS.find(l=>l.k===k)||{pr:0}).pr,x:p.x,y:p.y}});
+ items.forEach(it=>{const el=it.el;el.classList.remove('yield','dim','clustered','solohide');const c=el.querySelector('.cnt');if(c)c.remove();if(el.dataset.orig!=null){const pp=el.querySelector('.pricepin');if(pp)pp.textContent=el.dataset.orig}
+  it.el.parentElement&&(it.el.style.zIndex=String(10+it.pr*10));
+  if(soloLayer&&it.k!==soloLayer)el.classList.add('solohide');else if(focusLayer&&it.k!==focusLayer)el.classList.add('dim')});
+ const vis=items.filter(i=>!i.el.classList.contains('solohide'));
+ // 1) cluster per layer (fish per water body is already one icon per body); radius bigger at low zoom
+ const R=Math.floor(map.getZoom())<12?56:Math.floor(map.getZoom())<14?40:0;const reps=[];
+ LAYERS.forEach(L=>{const li=vis.filter(i=>i.k===L.k).sort((a,b)=>(b.el.classList.contains('deal')?1:0)-(a.el.classList.contains('deal')?1:0));const used=new Set();
+  const cells=new Map();li.forEach(a=>{const ck=R?Math.floor(a.x/R)+'_'+Math.floor(a.y/R):Math.random();const g=cells.get(ck)||[];g.push(a);cells.set(ck,g)});cells.forEach(grp=>{const a=grp[0];grp.forEach(b=>used.add(b));
+   grp.slice(1).forEach(b=>b.el.classList.add('clustered'));
+   if(grp.length>1){const c=document.createElement('div');c.className='cnt';c.textContent=grp.length;a.el.appendChild(c);
+    if(L.k==='deals'||L.k==='listings'){const ps=grp.map(g=>{const l=saleList.find(x=>Math.abs(x.longitude-g.m.getLngLat().lng)<1e-9&&Math.abs(x.latitude-g.m.getLngLat().lat)<1e-9);return l&&l.price}).filter(Boolean);const pp=a.el.querySelector('.pricepin');if(pp&&ps.length){a.el.dataset.orig=pp.textContent;pp.textContent=`${short$(Math.min(...ps))}–${short$(Math.max(...ps))}`}}
+    else if(L.k==='game'){a.el.dataset.n=grp.length}}
+   reps.push(a)})});
+ // 2) density cap per 120px cell + collision yield (higher priority placed first)
+ reps.sort((a,b)=>b.pr-a.pr);const placed=[],cell=new Map();let more=0;const CAP=3;
+ reps.forEach(it=>{const r=it.el.getBoundingClientRect();const box={l:r.left,t:r.top,r:r.right,b:r.bottom};const ck=Math.floor(it.x/120)+'_'+Math.floor(it.y/120);const n=cell.get(ck)||0;
+  const hit=placed.some(p=>Math.min(box.r,p.r)-Math.max(box.l,p.l)>6&&Math.min(box.b,p.b)-Math.max(box.t,p.t)>6);
+  if(hit||n>=CAP){it.el.classList.add('yield');more++}else{placed.push(box);cell.set(ck,n+1)}});
+ renderLegend(more)}
+function scheduleDeclutter(){clearTimeout(declTimer);declTimer=setTimeout(()=>requestAnimationFrame(declutter),60)}
+map.on('moveend',scheduleDeclutter);
+try{new MutationObserver(scheduleDeclutter).observe(map.getCanvasContainer().parentElement,{childList:true,subtree:false})}catch(e){}
+function renderLegend(more){let lg=$('#legend');if(!lg){lg=document.createElement('div');lg.id='legend';document.body.appendChild(lg)}
+ const act=activeLayers();lg.classList.toggle('hidden',!act.length);
+ lg.innerHTML=act.map(l=>`<button data-lg="${l.k}" class="${focusLayer===l.k?'on':''} ${soloLayer===l.k?'solo':''}">${l.n}</button>`).join('')+(more?`<span class="more">+${more} more</span>`:'');
+ lg.querySelectorAll('[data-lg]').forEach(b=>{let t=null,long=false;const k=b.dataset.lg;
+  b.addEventListener('pointerdown',()=>{long=false;t=setTimeout(()=>{long=true;window.__lgLong=true;soloLayer=soloLayer===k?null:k;try{navigator.vibrate&&navigator.vibrate(20)}catch(e){}declutter()},500)});
+  b.addEventListener('pointerup',()=>{clearTimeout(t);if(window.__lgLong){window.__lgLong=false;return}if(!long){soloLayer=null;setFocus(focusLayer===k?null:k)}});b.addEventListener('pointerleave',()=>clearTimeout(t))})}
+// focus follows most recent toggle/tap
+['btnGame','btnSale'].forEach(id=>$('#'+id).addEventListener('click',()=>setFocus(id==='btnGame'?'game':'listings')));
+document.addEventListener('click',e=>{const m=e.target.closest('.lpin,.gamepin,.fishpin');if(m){const k=m.classList.contains('lpin')?(m.classList.contains('deal')?'deals':'listings'):m.classList.contains('gamepin')?'game':'fish';if(focusLayer!==k){focusLayer=k;scheduleDeclutter()}}},true);
+
+/* ================= Theme: dark / light / auto ================= */
+settings.theme=settings.theme||'auto';
+const _cv=document.createElement('canvas').getContext('2d');
+function toHsl(c){_cv.fillStyle='#000';_cv.fillStyle=c;let h=_cv.fillStyle;let r,g,b,a=1;if(h[0]==='#'){r=parseInt(h.slice(1,3),16);g=parseInt(h.slice(3,5),16);b=parseInt(h.slice(5,7),16)}else{const m=h.match(/[\d.]+/g);if(!m)return null;[r,g,b]=m.map(Number);a=m[3]!=null?+m[3]:1}
+ r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let H=0,S=0,L=(mx+mn)/2;if(mx!==mn){const d=mx-mn;S=L>.5?d/(2-mx-mn):d/(mx+mn);H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60}return{H,S,L,a}}
+function darkOf(c,isText){const h=toHsl(c);if(!h)return c;const L=isText?Math.max(.75,1-h.L*.6):Math.max(.06,Math.min(.42,(1-h.L)*.55+.06));return`hsla(${h.H.toFixed(0)},${(h.S*70).toFixed(0)}%,${(L*100).toFixed(0)}%,${h.a})`}
+let _origPaint=null;
+function isDark(){return settings.theme==='dark'||(settings.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches)}
+function applyTheme(){const dark=isDark();document.documentElement.classList.toggle('light',!dark);document.documentElement.classList.toggle('dark',dark);
+ const tm=document.querySelector('meta[name=theme-color]');if(tm)tm.content=dark?'#15191c':'#f4f5f2';
+ if(!map.isStyleLoaded()&&!map.loaded())return;const st=map.getStyle();if(!st)return;
+ if(!dark&&!_origPaint){document.querySelectorAll('[data-theme-sel]').forEach(s=>s.value=settings.theme);return}
+ if(!_origPaint){_origPaint={};st.layers.forEach(l=>{const props={background:['background-color'],fill:['fill-color','fill-outline-color'],line:['line-color'],'fill-extrusion':['fill-extrusion-color'],symbol:['text-color','text-halo-color']}[l.type]||[];props.forEach(p=>{const v=map.getPaintProperty(l.id,p);if(typeof v==='string')(_origPaint[l.id]=_origPaint[l.id]||{})[p]=v})})}
+ Object.entries(_origPaint).forEach(([id,ps])=>{if(!map.getLayer(id))return;Object.entries(ps).forEach(([p,v])=>{let nv=v;
+  if(dark){if(p==='text-halo-color')nv='#111';else if(p==='text-color')nv=darkOf(v,true);else if(!/^hf-|^draw|^sketch/.test(id))nv=darkOf(v,false)}
+  try{map.setPaintProperty(id,p,nv)}catch(e){}})});
+ map.getStyle().layers.filter(l=>l.type==='symbol').forEach(l=>{try{map.setPaintProperty(l.id,'text-halo-color',dark?'#111':'#fff');if(dark&&!(_origPaint[l.id]||{})['text-color'])map.setPaintProperty(l.id,'text-color','#e8e8e8')}catch(e){}});
+ document.querySelectorAll('[data-theme-sel]').forEach(s=>s.value=settings.theme)}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>settings.theme==='auto'&&applyTheme());
+map.on('load',()=>setTimeout(applyTheme,50));applyTheme();
+function setTheme(v){settings.theme=v;saveSettings();applyTheme()}
+(()=>{const p=$('#settings .panel');if(p&&!$('#sTheme')){p.insertAdjacentHTML('afterbegin',`<label>Appearance <select id="sTheme" data-theme-sel style="padding:8px;font-size:16px"><option value="auto">Auto (system)</option><option value="dark">Dark</option><option value="light">Light</option></select></label>`);$('#sTheme').value=settings.theme;$('#sTheme').onchange=e=>setTheme(e.target.value)}})();
+
+/* ================= Home screen ================= */
+settings.landGame=settings.landGame!==false;settings.fish=settings.fish!==false;
+function showHome(){let h=$('#home');if(h)h.remove();h=document.createElement('div');h.id='home';const key=!!settings.rcKey;
+ h.innerHTML=`<div class="hwrap"><div class="hlogo">🏕 Homestead Finder</div>
+ <h1>Know the land before you drive out.</h1>
+ <p class="hlead"><b>The Getaway Report</b> scores any spot for a hunting getaway in seconds: public land, verified game & fish, water, access, flood, power – weighted by <b>your</b> priorities.</p>
+ <div class="hcard"><label>State<select id="hState"><option value="">Pick a state…</option>${STATES.map(s=>`<option value="${s[0]}">${s[1]}</option>`).join('')}</select></label>
+ <label>Listing type<select id="hMode"><option value="sale">For Sale</option><option value="rent">For Rent</option><option value="rto">Rent-to-Own</option></select></label>
+ ${key?`<label class="hsw"><input type="checkbox" id="hSale"> 🏷️ Show listings</label><label class="hsw"><input type="checkbox" id="hDeals"> 💰 Deal Finder (deals only)</label>`:''}</div>
+ <div class="hcard"><b>Wildlife</b><label class="hsw"><input type="checkbox" id="hLand"> 🦌 Land game</label><label class="hsw"><input type="checkbox" id="hFish"> 🎣 Fish</label></div>
+ <div class="hcard"><b>Property type</b><div id="hChips">${['All',...Object.keys(PTYPES)].map(t=>`<button data-ht="${t}">${PTYPES[t]||''} ${t}</button>`).join('')}</div></div>
+ <div class="hrowb"><button id="hPrio">⚖️ My Priorities</button><button id="hShort">⭐ Shortlist</button><button id="hRecent">🕘 Recent</button></div>
+ <label class="htheme">Appearance <select id="hTheme" data-theme-sel><option value="auto">Auto</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
+ <button id="hOpen">Open Map</button></div>`;
+ document.body.appendChild(h);
+ $('#hState').value=settings.state||'';$('#hMode').value=settings.mode||'sale';$('#hLand').checked=gameOn&&settings.landGame;$('#hFish').checked=gameOn&&settings.fish;$('#hTheme').value=settings.theme;
+ if(key){$('#hSale').checked=saleOn;$('#hDeals').checked=dealsOnly}
+ let ht=typeFilter;const chips=()=>h.querySelectorAll('[data-ht]').forEach(b=>b.classList.toggle('on',b.dataset.ht===ht));chips();
+ h.querySelectorAll('[data-ht]').forEach(b=>b.onclick=()=>{ht=b.dataset.ht;chips()});
+ $('#hTheme').onchange=e=>setTheme(e.target.value);
+ const save=()=>{settings.state=$('#hState').value;settings.mode=$('#hMode').value;const hl=$('#hLand').checked,hf=$('#hFish').checked;gameOn=hl||hf;if(gameOn){settings.landGame=hl;settings.fish=hf}else{settings.landGame=true;settings.fish=true}
+ settings.game=gameOn;if(key){saleOn=$('#hSale').checked||$('#hDeals').checked;settings.sale=saleOn;dealsOnly=$('#hDeals').checked;settings.dealsOnly=dealsOnly}
+  typeFilter=ht;settings.typeFilter=ht;saveSettings();DB.put('cache',{id:'home-selections',t:Date.now(),data:{...settings,rcKey:undefined}}).catch(()=>{})};
+ const go=()=>{save();h.remove();$('#state').value=settings.state;$('#mode').value=settings.mode;$('#btnGame').classList.toggle('on',gameOn);$('#btnSale').classList.toggle('on',saleOn);
+  const s=STATES.find(x=>x[0]===settings.state);if(s)map.jumpTo({center:[s[3],s[2]],zoom:Math.max(s[4],8.2),pitch:0});
+  setTimeout(()=>{refreshListings();updateGame();renderSalePins()},300)};
+ $('#hOpen').onclick=go;
+ $('#hPrio').onclick=()=>{save();h.remove();openPriorities()};$('#hShort').onclick=()=>{save();h.remove();openShortlist()};$('#hRecent').onclick=()=>{save();h.remove();openRecent()}}
+(()=>{const b=document.createElement('button');b.id='btnHome';b.title='Home';b.textContent='⌂';$('#fabs').prepend(b);b.onclick=showHome})();
+
+showHome();
+</script>
+</body></html>

@@ -1,0 +1,5 @@
+h=open('index.html').read()
+h=h.replace('<link rel="stylesheet" href="styles.css">','<style>'+open('styles.css').read()+'</style>')
+h=h.replace('<link rel="manifest" href="manifest.json">','').replace('href="icon.svg"','href="data:image/svg+xml,'+open('icon.svg').read().replace('#','%23').replace('"',"'")+'"')
+h=h.replace('<script src="app.js"></script>','<script>window.HF_STANDALONE=1;\n'+open('app.js').read()+'</script>')
+open('homestead-standalone.html','w').write(h)

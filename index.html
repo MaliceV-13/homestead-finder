@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#15191c"><title>Homestead Finder</title>
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon.svg"><link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="styles.css">
+</head><body>
+<div id="map"></div>
+<div id="top">
+ <form id="searchForm"><input id="q" type="search" placeholder="Search address or place" autocomplete="off"><button>🔍</button></form>
+ <div id="results"></div>
+ <div class="row">
+  <select id="state"><option value="">Pick a state…</option></select>
+  <select id="mode"><option value="sale">For Sale</option><option value="rent">For Rent</option><option value="rto">Rent-to-Own</option></select>
+ </div>
+</div>
+<div id="banner" class="hidden"></div>
+<div id="layerbar"><button id="btnGame">🦌 Wild Game</button><button id="btnSale">🏷️ For Sale</button><button id="btnTrails" title="Trails & backroads">🥾</button></div>
+<div id="gameNote" class="hidden"></div>
+<div id="fabs">
+ <button id="btnLayers" title="Map layers">◫</button>
+ <button id="btnSat" title="Hybrid satellite">🛰️</button>
+ <button id="btnTopo" title="USGS topo overlay">🗺️</button>
+ <button id="btnExplore" title="Explore mode">🎥</button>
+ <button id="btn3d" title="3D terrain">3D</button>
+ <button id="btnPin" title="Drop pin here">📍</button>
+ <button id="btnSettings" title="Settings">⚙️</button>
+</div>
+<div id="offline" class="hidden">Offline – showing saved data only</div>
+<div id="sheet" class="hidden"><div class="grab"></div><button id="closeSheet">✕</button><div id="sheetBody"></div></div>
+<div id="settings" class="hidden"><div class="panel">
+ <h2>Settings</h2>
+ <label>RentCast API key (for live listings)<input id="rcKey" type="password" placeholder="paste key"></label>
+ <p class="small">Free key from app.rentcast.io. Stored only on this phone. Listings are cached 24 h per area to save your quota.</p><div id="optLink"></div>
+ <div id="status"></div>
+ <button id="saveSettings">Save</button> <button id="clearCache">Clear listing cache</button> <button id="closeSettings">Close</button>
+ <h3>My pins</h3><div id="pinList"></div>
+</div></div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+</body></html>
