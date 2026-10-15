@@ -1,4 +1,4 @@
-const C='hf-v4';const CORE=['./','index.html','styles.css','app.js','manifest.json','icon.svg'];
+const C='hf-v5';const CORE=['./','index.html','styles.css','app.js','manifest.json','icon.svg','icon-180.png','favicon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET')return;

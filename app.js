@@ -302,7 +302,8 @@ async function updateGame(){
    const far=viewBox(3);[gameObs,fishObs].forEach(M=>{if(M.size>3000)[...M].forEach(([k,o])=>{if(!inBox(o.geojson.coordinates,far))M.delete(k)})});
   }catch(e){if(id===gameReq&&!gameMk.size)gameNote('Game layer: iNaturalist unreachable – try again')}}
  renderGame()}
-function renderGame(){if(!gameOn)return;if(map.isMoving()){return}const z=Math.floor(map.getZoom());const cell=360/Math.pow(2,z)*0.9;const area=viewBox(0.6),vis=viewBox(0);const want=new Map();const groups=new Map();
+let __lastMove=0;map.on('move',()=>__lastMove=performance.now());
+function renderGame(){if(!gameOn)return;if(map.isMoving()||performance.now()-__lastMove<800){clearTimeout(renderGame.t);renderGame.t=setTimeout(renderGame,500);return}const z=Math.floor(map.getZoom());const cell=360/Math.pow(2,z)*0.9;const area=viewBox(2),vis=viewBox(0);const want=new Map();const groups=new Map();
  if(settings.landGame!==false)gameObs.forEach(o=>{const c=o.geojson.coordinates;if(!inBox(c,area))return;const g=gameGroup(o.taxon);const k=g+'|'+z+'|'+Math.floor(c[0]/cell)+'|'+Math.floor(c[1]/cell);
   const e=want.get(k)||{g,o,n:0};e.n++;if((o.observed_on||'')>(e.o.observed_on||''))e.o=o;want.set(k,e);if(inBox(c,vis)){const G=groups.get(g)||{n:0,latest:o};G.n++;if((o.observed_on||'')>(G.latest.observed_on||''))G.latest=o;groups.set(g,G)}});
  const W=new Map();want.forEach((e,k)=>{const G=groups.get(e.g)||{n:e.n,latest:e.o};const C=gameCounts.get(e.g);const name=GAME_TAXA[e.g];const ph=(C&&C.photo&&(C.photo.square_url||C.photo.url))||e.o.photos?.[0]?.url||'';
@@ -310,6 +311,7 @@ function renderGame(){if(!gameOn)return;if(map.isMoving()){return}const z=Math.f
   const sp=C?[...C.species]:[];
   const html=`<div class="gpop"><b>${esc(name)}</b>${sp.length>1?`<div class="small">${esc(sp.slice(0,4).join(', '))}</div>`:''}<img src="${esc(ph.replace('square','medium'))}" alt=""><div><b>${count}</b> verified observation${count==1?'':'s'} in view</div><div>Most recent: ${esc(L.observed_on||'unknown date')}</div><div class="src">Observed by ${esc(obsr)} · Photo ${esc(credit)} · iNaturalist research grade</div></div>`;
   W.set(k,{ll:e.o.geojson.coordinates,sig:name+e.n+ph,html,inner:`<div class="gimg" style="background-image:url('${esc(ph)}')"></div><div class="glab">${esc(name)}${e.n>1?' ·'+e.n:''}</div>`})});
+ const keep=viewBox(3);gameMk.forEach((m,k)=>{if(!W.has(k)&&k.split('|')[1]==String(z)){const l=m.getLngLat();if(inBox([l.lng,l.lat],keep)&&!inBox([l.lng,l.lat],area))W.set(k,{sig:m.__sig,html:m.__html})}});
  syncMarkers(gameMk,W,w=>{const el=document.createElement('div');el.className='gamepin';el.innerHTML=w.inner;const pop=new maplibregl.Popup({offset:24,maxWidth:'250px'}).setHTML(w.html);const mk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat(w.ll).setPopup(pop).addTo(map);el.addEventListener('click',ev=>{ev.stopPropagation();pop.setHTML(mk.__html||w.html);if(!pop.isOpen())pop.setLngLat(mk.getLngLat()).addTo(map)});return mk});
  W.forEach((w,k)=>{const m=gameMk.get(k);if(m)m.__html=w.html});gameMarkers=[...gameMk.values()];
  const nf=renderFish();gameNoteFor(groups.size,nf);scheduleDeclutter()}
@@ -686,7 +688,7 @@ function snapToWater(pt,WF){let best=null;for(const w of WF.out){let inside=fals
  return{p:best.p,name:name||('Unnamed '+(best.w.cls==='river'?'river':best.w.cls==='stream'?'creek':best.w.poly?'pond/lake':'stream')),key:(name||best.w.cls)+'|'+(name?'':best.p.map(v=>v.toFixed(3)).join(','))}}
 function renderFish(){if(!gameOn||settings.fish===false){syncMarkers(fishMk,new Map());fishMarkers=[];return 0}
  if(map.getZoom()<10){const ar=viewBox(0.6),W=new Map();fishMk.forEach((m,k)=>{const l=m.getLngLat();if(inBox([l.lng,l.lat],ar))W.set(k,{sig:m.__sig})});syncMarkers(fishMk,W,()=>null);fishMarkers=[...fishMk.values()];return countIn(fishMk)}
- const area=viewBox(0.6);const WF=waterFeatures();const bodies=new Map();
+ const area=viewBox(2);const WF=waterFeatures();const bodies=new Map();
  fishObs.forEach(o=>{const c=o.geojson.coordinates;if(!inBox(c,area))return;let s=snapCache.get(o.id);if(!s){s=snapToWater(c,WF);if(s)snapCache.set(o.id,s);else return}
   const g=fishGroup(o.taxon);const B=bodies.get(s.key)||{name:s.name,p:s.p,sp:new Map()};bodies.set(s.key,B);const S=B.sp.get(g)||{g,n:0,latest:o,photo:o.taxon.default_photo||o.photos?.[0]};S.n++;if((o.observed_on||'')>(S.latest.observed_on||''))S.latest=o;B.sp.set(g,S)});
  const W=new Map();bodies.forEach((B,k)=>{const sp=[...B.sp.values()].sort((a,b)=>b.n-a.n);
