@@ -147,3 +147,4 @@ html.plain .hlogo{color:var(--acc)}html.plain .grab{background:#dadce0}
 .srcn{display:inline-block;margin-left:4px;min-width:14px;padding:0 3px;border-radius:7px;background:#111;color:#fff;font-size:10px;line-height:14px;text-align:center;vertical-align:1px}
 .srcbox{margin:6px 0}.srcbox .small{margin-top:3px}.srcb{background:#244a6b;color:#fff}.vlink{display:inline-block;margin-top:4px;color:#7cc4ff;text-decoration:underline}
 html.light .vlink,html.plain .vlink{color:#1565c0}.srcrow{margin:8px 0;padding:6px 0;border-top:1px solid #8884}.srcrow input[type=password]{width:100%;box-sizing:border-box;margin-top:4px}.chk{display:flex;align-items:center;gap:6px}
+#settings .chk{justify-content:flex-start;font-weight:600}#settings .chk input{width:22px;height:22px;margin:0;padding:0;flex:none}
