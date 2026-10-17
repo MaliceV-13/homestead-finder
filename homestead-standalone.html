@@ -150,6 +150,9 @@ html.plain .hlogo{color:var(--acc)}html.plain .grab{background:#dadce0}
 #map.fb2d{overflow:hidden;background:#cfd8dc;touch-action:none}.fbctl{position:absolute;right:10px;top:45%;display:flex;flex-direction:column;gap:6px;z-index:2}
 .fbctl button{width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:20px;box-shadow:0 1px 3px #0004}
 .fbnote{position:absolute;left:8px;bottom:60px;background:#fffd;font-size:11px;padding:3px 6px;border-radius:6px}
+.srcn{display:inline-block;margin-left:4px;min-width:14px;padding:0 3px;border-radius:7px;background:#111;color:#fff;font-size:10px;line-height:14px;text-align:center;vertical-align:1px}
+.srcbox{margin:6px 0}.srcbox .small{margin-top:3px}.srcb{background:#244a6b;color:#fff}.vlink{display:inline-block;margin-top:4px;color:#7cc4ff;text-decoration:underline}
+html.light .vlink,html.plain .vlink{color:#1565c0}.srcrow{margin:8px 0;padding:6px 0;border-top:1px solid #8884}.srcrow input[type=password]{width:100%;box-sizing:border-box;margin-top:4px}.chk{display:flex;align-items:center;gap:6px}
 </style>
 </head><body>
 <div id="map"></div>
@@ -201,6 +204,7 @@ const DB={db:null,async open(){if(this.db)return this.db;return this.db=await ne
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const settings=JSON.parse(localStorage.getItem('hf-settings')||'{}');
 const saveSettings=()=>localStorage.setItem('hf-settings',JSON.stringify(settings));
+function afterIdle(fn){let done=false;const go=()=>{if(done)return;done=true;const run=()=>{try{fn()}catch(e){}};window.requestIdleCallback?requestIdleCallback(run,{timeout:2000}):setTimeout(run,200)};try{map.once('idle',go)}catch(e){}setTimeout(go,4000)}
 
 /* ---------- fetch helpers ---------- */
 async function getJSON(url,opt={},ms=15000){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);try{const r=await fetch(url,{...opt,signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(t)}}
@@ -274,7 +278,7 @@ map.on('load',()=>{
  map.addLayer({id:'sketch-line',type:'line',source:'sketch',paint:{'line-color':'#ff6f00','line-width':3,'line-dasharray':[2,1]}});
  map.addLayer({id:'sketch-pt',type:'circle',source:'sketch',filter:['==','$type','Point'],paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#ff6f00','circle-stroke-width':3}});
  setTerrain(settings.terrain!==false);
- loadUserData();refreshListings();updateGame();
+ loadUserData();updateGame();afterIdle(()=>refreshListings()); // listings load lazily once the map is idle
 });
 function setTerrain(on){terrainOn=on;settings.terrain=on;saveSettings();$('#btn3d').classList.toggle('on',on);
  try{map.setTerrain(on?{source:'dem',exaggeration:1.3}:null)}catch(e){}
@@ -306,42 +310,102 @@ $('#state').value=settings.state||'';$('#mode').value=settings.mode||'sale';
 $('#state').onchange=()=>{settings.state=$('#state').value;saveSettings();const s=STATES.find(x=>x[0]===settings.state);if(s)map.flyTo({center:[s[3],s[2]],zoom:s[4],pitch:0});refreshListings()};
 $('#mode').onchange=()=>{settings.mode=$('#mode').value;saveSettings();refreshListings()};
 
-const Providers={
- rentcast:{name:'RentCast',supports:{sale:true,rent:true,rto:false},
-  async fetchArea(mode,lat,lon,radius){const ep=mode==='sale'?'listings/sale':'listings/rental/long-term';
-   const j=await getJSON(`https://api.rentcast.io/v1/${ep}?latitude=${lat}&longitude=${lon}&radius=${radius}&status=Active&limit=500`,{headers:{'X-Api-Key':settings.rcKey,Accept:'application/json'}},20000);
-   return (Array.isArray(j)?j:[]).filter(l=>l.latitude&&l.longitude);},
-  async fetch(mode,state){const ep=mode==='sale'?'listings/sale':'listings/rental/long-term';
-   const u=`https://api.rentcast.io/v1/${ep}?state=${state}&status=Active&limit=200`;
-   const j=await getJSON(u,{headers:{'X-Api-Key':settings.rcKey,Accept:'application/json'}},20000);
-   return (Array.isArray(j)?j:[]).filter(l=>l.latitude&&l.longitude);}}
-};
+/* ---------- listing sources: adapter architecture ----------
+ Each source = {id,name,needsKey,ttl,timeout,supports,howTo,fetch(q)} → normalized listings
+ [{id,source,sources,url,price,lat,lon,address,acres,beds,baths,type,listedDate,status,...legacy RentCast-shaped fields}].
+ HARD RULES: only real, currently posted listings from live APIs; no key = that source is skipped; nothing is invented. */
+settings.src=settings.src&&typeof settings.src==='object'?settings.src:{};
+const srcDiag=window.srcDiag={};
+function mkListing(src,f){const L={...(f.raw||{})};
+ L.id=String(f.id);L.source=src.id;L.sources=[src.name];L.url=f.url||null;L.urls=f.url?{[src.name]:f.url}:{};L.prices=f.price?{[src.name]:f.price}:{};
+ L.price=f.price||null;L.lat=L.latitude=+f.lat;L.lon=L.longitude=+f.lon;L.address=L.formattedAddress=f.address||'';
+ L.acres=f.acres!=null&&isFinite(f.acres)?+f.acres:null;if(L.lotSize==null&&L.acres!=null)L.lotSize=Math.round(L.acres*43560);
+ L.beds=f.beds??null;if(L.bedrooms==null&&f.beds!=null)L.bedrooms=f.beds;L.baths=f.baths??null;if(L.bathrooms==null&&f.baths!=null)L.bathrooms=f.baths;
+ L.type=f.type||null;if(!L.propertyType&&f.type)L.propertyType=f.type;if(L.squareFootage==null&&f.sqft)L.squareFootage=f.sqft;
+ L.listedDate=f.listedDate||null;L.status=f.status||null;if(L.daysOnMarket==null&&f.listedDate){const d=Math.floor((Date.now()-Date.parse(f.listedDate))/864e5);if(d>=0&&d<36500)L.daysOnMarket=d}
+ return L}
+const okCoord=(la,lo)=>Number.isFinite(+la)&&Number.isFinite(+lo)&&Math.abs(la)<=90&&Math.abs(lo)<=180&&!(+la===0&&+lo===0);
+const LISTING_SOURCES=[
+ {id:'rentcast',name:'RentCast',needsKey:true,ttl:864e5,timeout:20000,supports:{sale:true,rent:true},
+  howTo:'Free key at app.rentcast.io → API Dashboard (Developer plan: 50 calls/month free, overage billed). Active MLS/listing-site listings, refreshed daily.',
+  key:()=>settings.rcKey||'',cacheKey:q=>`rcv-${q.mode}-${q.lat}-${q.lon}-${q.rad}`,
+  async fetch(q){const ep=q.mode==='sale'?'listings/sale':'listings/rental/long-term';
+   const j=await getJSON(`https://api.rentcast.io/v1/${ep}?latitude=${q.lat}&longitude=${q.lon}&radius=${q.rad}&status=Active&limit=500`,{headers:{'X-Api-Key':this.key(),Accept:'application/json'}},this.timeout);
+   return (Array.isArray(j)?j:[]).filter(l=>l&&okCoord(l.latitude,l.longitude)&&(!l.status||/active/i.test(l.status))).map(l=>mkListing(this,{raw:l,id:l.id||l.formattedAddress,price:l.price,lat:l.latitude,lon:l.longitude,address:l.formattedAddress,acres:l.lotSize?l.lotSize/43560:null,beds:l.bedrooms,baths:l.bathrooms,type:l.propertyType,listedDate:l.listedDate,status:l.status||'Active',sqft:l.squareFootage}))}},
+ {id:'batchdata',name:'BatchData',needsKey:true,ttl:864e5,timeout:20000,supports:{sale:true},
+  howTo:'Paid API (batchdata.io; plans from ~$1,000/mo plus the Listing add-on). Create an API token in the BatchData app. Only records whose MLS listing status is active/for-sale are shown; capped at 100 records per area per day to protect your quota.',
+  key:()=>(settings.src.batchdata&&settings.src.batchdata.on&&settings.src.batchdata.key)||'',cacheKey:q=>`src-batchdata-${q.mode}-${q.lat}-${q.lon}-${q.rad}`,
+  async fetch(q){const st=await stateNameAt(+q.lat,+q.lon);if(!st)throw new Error('could not resolve state for area');
+   const dLat=q.rad/69,dLon=q.rad/(69*Math.max(.2,Math.cos(q.lat*Math.PI/180)));
+   const body={searchCriteria:{query:st,quickList:'active-listing',address:{geoLocationBoundingBox:{nwGeoPoint:{latitude:+q.lat+dLat,longitude:+q.lon-dLon},seGeoPoint:{latitude:+q.lat-dLat,longitude:+q.lon+dLon}}}},options:{take:100,skip:0}};
+   const j=await getJSON('https://api.batchdata.com/api/v1/property/search',{method:'POST',headers:{Authorization:'Bearer '+this.key(),'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body)},this.timeout);
+   const P=(j&&j.results&&Array.isArray(j.results.properties))?j.results.properties:[];
+   return P.map(p=>{const a=p.address||{},m=p.listing||p.mls||{};const s=String(m.status||'');
+    if(!s||!/active|for.?sale|coming.?soon/i.test(s)||/sold|pending|off|expired|cancel|withdrawn|failed|closed/i.test(s)||m.rental===true)return null;
+    if(!(m.price>0)||!okCoord(a.latitude,a.longitude))return null;
+    const addr=[a.street,a.city,[a.state,a.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    return mkListing(this,{id:'bd:'+(p._id||a.hash||addr),price:m.price,lat:a.latitude,lon:a.longitude,address:addr,acres:m.lotSizeSquareFeet?m.lotSizeSquareFeet/43560:null,beds:m.bedroomCount,baths:m.bathroomCount,type:m.propertyType,listedDate:m.originalListingDate,status:s,sqft:m.totalBuildingAreaSquareFeet||m.livingArea,url:/^https:\/\//.test(m.listingUrl||'')?m.listingUrl:null})}).filter(Boolean)}}
+];
+const activeSources=mode=>LISTING_SOURCES.filter(s=>s.key()&&(!mode||s.supports[mode]));
+const anySource=()=>LISTING_SOURCES.some(s=>s.key());
+const _stCache={};
+async function stateNameAt(lat,lon){const k=lat.toFixed(1)+','+lon.toFixed(1);if(_stCache[k])return _stCache[k];
+ try{const j=await getJSON(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&lang=en`,{},8000);const s=j&&j.features&&j.features[0]&&j.features[0].properties&&j.features[0].properties.state;if(s)return _stCache[k]=s}catch(e){}
+ const s=STATES.find(x=>x[0]===settings.state);return s?s[1]:null}
+/* ---- de-duplication across sources ---- */
+const _AB={street:'st',road:'rd',avenue:'ave',av:'ave',drive:'dr',lane:'ln',court:'ct',highway:'hwy',route:'rte',rt:'rte',county:'co',cnty:'co',north:'n',south:'s',east:'e',west:'w',northeast:'ne',northwest:'nw',southeast:'se',southwest:'sw',boulevard:'blvd',place:'pl',circle:'cir',trail:'trl',parkway:'pkwy',terrace:'ter',point:'pt',mount:'mt',hollow:'holw',ridge:'rdg',creek:'crk',first:'1st',second:'2nd',third:'3rd'};
+function normAddr(a){if(!a)return '';let s=String(a).toLowerCase().split(',')[0].replace(/#.*$/,'').replace(/\b(apt|unit|ste|suite|lot)\s*\w+$/,'').replace(/[^a-z0-9 ]/g,' ').trim().split(/\s+/).map(w=>_AB[w]??w).filter(Boolean).join(' ');return /^\d/.test(s)?s:''}
+const _rel=(a,b)=>Math.abs(a-b)/Math.max(a,b);
+function sameProperty(a,b){if(a.source===b.source)return false;const d=hav([a.lon,a.lat],[b.lon,b.lat]);
+ const ka=normAddr(a.address),kb=normAddr(b.address);if(ka&&ka===kb&&d<2000)return true;
+ if(d>30)return false;const pOk=!(a.price>0&&b.price>0)||_rel(a.price,b.price)<=0.10;const aOk=!(a.acres>0&&b.acres>0)||_rel(a.acres,b.acres)<=0.15;return pOk&&aOk}
+function mergeListings(lists){const out=[];const grid=new Map();const cell=l=>Math.round(l.lat*200)+':'+Math.round(l.lon*200);
+ const near=l=>{const r=[],la=Math.round(l.lat*200),lo=Math.round(l.lon*200);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const g=grid.get((la+i)+':'+(lo+j));if(g)r.push(...g)}return r};
+ const addrIdx=new Map();
+ for(const list of lists)for(const l0 of (list||[])){if(!l0||!okCoord(l0.lat,l0.lon))continue;const l={...l0,sources:[...(l0.sources||[l0.source])],prices:{...(l0.prices||{})},urls:{...(l0.urls||{})}};
+  const ka=normAddr(l.address);let m=near(l).find(x=>sameProperty(x,l));if(!m&&ka)m=(addrIdx.get(ka)||[]).find(x=>sameProperty(x,l));
+  if(m){l.sources.forEach(s=>{if(!m.sources.includes(s))m.sources.push(s)});Object.assign(m.prices,l.prices,{...m.prices});Object.keys(l.urls).forEach(k=>{if(!m.urls[k])m.urls[k]=l.urls[k]});
+   if(!m.url&&l.url)m.url=l.url;['acres','lotSize','beds','bedrooms','baths','bathrooms','squareFootage','propertyType','type','listedDate','daysOnMarket','yearBuilt'].forEach(k=>{if(m[k]==null&&l[k]!=null)m[k]=l[k]});
+   m.dupIds=[...(m.dupIds||[]),l.id];const ps=Object.values(m.prices).filter(p=>p>0);m.priceDiff=ps.length>1&&Math.max(...ps)-Math.min(...ps)>=Math.max(1,0.005*Math.max(...ps))?Math.max(...ps)-Math.min(...ps):0;continue}
+  l.priceDiff=0;out.push(l);const c=cell(l);(grid.get(c)||grid.set(c,[]).get(c)).push(l);if(ka)(addrIdx.get(ka)||addrIdx.set(ka,[]).get(ka)).push(l)}
+ return out}
+/* ---- per-source fetch with own cache/TTL, timeout and isolation ---- */
+const _inflight=new Map();
+async function loadSource(s,q,force){const key=s.cacheKey(q);let rec=null;try{rec=await DB.get('cache',key)}catch(e){}
+ if(rec&&!(Array.isArray(rec.data)&&rec.data.every(x=>x&&x.source===s.id)))rec=null; // pre-adapter cache format → refetch
+ const D=srcDiag[s.id]={name:s.name,t:Date.now(),state:'',n:0,err:null};
+ const fresh=rec&&Date.now()-rec.t<=s.ttl;
+ if(!force&&fresh){D.state='cached '+new Date(rec.t).toLocaleString();D.n=(rec.data||[]).length;return {list:rec.data||[],note:'cached'}}
+ if(!navigator.onLine){D.state='offline'+(rec?' (cached)':'');D.n=rec?(rec.data||[]).length:0;return {list:rec?rec.data||[]:[],note:'offline'}}
+ try{let p=_inflight.get(key);if(!p){p=Promise.race([s.fetch(q),new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),s.timeout+2000))]);_inflight.set(key,p)}
+  let list;try{list=await p}finally{_inflight.delete(key)}
+  list=(Array.isArray(list)?list:[]).filter(l=>l&&okCoord(l.lat,l.lon));await DB.put('cache',{id:key,t:Date.now(),data:list}).catch(()=>{});D.state='fresh';D.n=list.length;return {list,note:'fresh'}}
+ catch(e){const msg=/401|403/.test(e.message)?'key rejected ('+e.message+')':/429/.test(e.message)?'quota/rate limit ('+e.message+')':e.name==='AbortError'?'timeout':e.message;
+  D.err=msg;D.state='error'+(rec?' – using cached':'');D.n=rec?(rec.data||[]).length:0;hfDiag.errors.push(s.name+': '+String(msg).slice(0,120));hfDiag.errors=hfDiag.errors.slice(-15);return {list:rec?rec.data||[]:[],note:'error',err:msg}}}
 let listingMarkers=[],saleTimer=null,saleReq=0;
-$('#btnSale').classList.toggle('on',saleOn);function saleVis(){$('#btnSale').classList.toggle('hidden',!settings.rcKey);if(typeof renderChips==='function'&&document.getElementById('chips'))renderChips()}saleVis();
+$('#btnSale').classList.toggle('on',saleOn);function saleVis(){$('#btnSale').classList.toggle('hidden',!anySource());if(typeof renderChips==='function'&&document.getElementById('chips'))renderChips()}saleVis();
 $('#btnSale').onclick=()=>{saleOn=!saleOn;settings.sale=saleOn;saveSettings();$('#btnSale').classList.toggle('on',saleOn);refreshListings()};
 map.on('moveend',()=>{clearTimeout(saleTimer);saleTimer=setTimeout(()=>refreshListings(),800)});
 function keyPrompt(mode){const ban=$('#banner');
- ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>`+(mode==='rto'?`<b>Rent-to-own:</b> no listing provider offers a reliable rent-to-own feed, so no live pins are shown. Switch to For Sale or For Rent.`:
- `<b>Live For-Sale pins need a free RentCast API key.</b> Create one at app.rentcast.io (free tier ≈ 50 calls/month), then paste it here. It's stored only on this phone; listings are cached 24 h to save quota.<div style="display:flex;gap:6px;margin-top:6px"><input id="bannerKey" type="password" placeholder="paste RentCast key" style="flex:1;padding:8px;font-size:16px"><button id="bannerKeySave" style="border:0;background:#2f5d3a;color:#fff;border-radius:8px;padding:0 12px">Save</button></div>`);
- ban.classList.remove('hidden');const b=$('#bannerKeySave');if(b)b.onclick=()=>{const v=$('#bannerKey').value.trim();if(!v)return;settings.rcKey=v;saveSettings();saleVis();refreshListings(true)}}
+ ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button><b>Rent-to-own:</b> no listing provider offers a reliable rent-to-own feed, so no live pins are shown. Switch to For Sale or For Rent.`;ban.classList.remove('hidden')}
 async function refreshListings(force){
  const mode=settings.mode||'sale';const ban=$('#banner');const id=++saleReq;
  const clear=()=>{saleList=[];syncMarkers(listingMk,new Map());listingMarkers=[];renderChips()};
  if(!saleOn){clear();if(ban.dataset.k==='sale')ban.classList.add('hidden');return}
  ban.dataset.k='sale';
- if(!settings.rcKey){clear();ban.classList.add('hidden');return}
+ if(!anySource()){clear();ban.classList.add('hidden');return}
  if(mode==='rto'){clear();keyPrompt(mode);return}
  if(map.getZoom()<8){ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>Zoom in closer (county level) to load listing pins for this area.`;ban.classList.remove('hidden');return}
  const c=map.getCenter(),b=map.getBounds();const radius=Math.min(50,Math.max(1,hav([c.lng,c.lat],[b.getEast(),b.getNorth()])/1609.344));
- const rr=radius<5?0.02:0.1;const lat=(Math.round(c.lat/rr)*rr).toFixed(2),lon=(Math.round(c.lng/rr)*rr).toFixed(2),rad=Math.ceil(radius);
- const key=`rcv-${mode}-${lat}-${lon}-${rad}`;let rec=null;try{rec=await DB.get('cache',key)}catch(e){}
- let list=rec&&rec.data,note='';
- if(force||!rec||Date.now()-rec.t>864e5){
-  if(navigator.onLine){try{list=await Providers.rentcast.fetchArea(mode,lat,lon,rad);await DB.put('cache',{id:key,t:Date.now(),data:list}).catch(()=>{});note='Fresh from RentCast'}catch(e){note=`RentCast error (${esc(e.message)}). `+(rec?'Showing cached data.':'')}}
-  else note='Offline – showing cached listings';
- } else note=`Cached ${new Date(rec.t).toLocaleString()} (refreshes daily)`;
- if(id!==saleReq)return;list=list||[];
- ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>${list.length?list.length+' live '+(mode==='sale'?'for-sale':'rental')+' listings here':'No active '+(mode==='sale'?'for-sale':'rental')+' listings returned by RentCast for this area'} · ${note}`;ban.classList.remove('hidden');
+ const rr=radius<5?0.02:0.1;const q={mode,lat:(Math.round(c.lat/rr)*rr).toFixed(2),lon:(Math.round(c.lng/rr)*rr).toFixed(2),rad:Math.ceil(radius)};
+ const S=activeSources(mode);
+ if(!S.length){clear();ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>None of your enabled listing sources offers ${mode==='rent'?'rentals':'this mode'}.`;ban.classList.remove('hidden');return}
+ const res=await Promise.all(S.map(s=>loadSource(s,q,force).catch(e=>({list:[],note:'error',err:e.message}))));
+ if(id!==saleReq)return;
+ let list=[];try{list=mergeListings(res.map(r=>r.list))}catch(e){hfDiag.errors.push('merge: '+e.message);list=[].concat(...res.map(r=>r.list||[]))}
+ const notes=S.map((s,i)=>`${s.name}: ${res[i].note}`).join(' · ');const bad=res.filter(r=>r.note==='error').length;
+ const dup=list.filter(l=>l.sources&&l.sources.length>1).length;
+ ban.innerHTML=`<button class="x" onclick="this.parentNode.classList.add('hidden')">✕</button>${list.length?list.length+' live '+(mode==='sale'?'for-sale':'rental')+' listings here':'No active '+(mode==='sale'?'for-sale':'rental')+' listings returned for this area'}${dup?` (${dup} listed on 2+ sources, merged)`:''} · ${esc(notes)}${bad?' · <span class="small">details in Settings › Diagnostics</span>':''}`;ban.classList.remove('hidden');
  saleList=list;renderSalePins();
 }
 function searchLinks(name,mode){const slug=encodeURIComponent(name.replace(/ /g,'-'));return `<a href="https://www.zillow.com/homes/${mode==='rent'?'for_rent':'for_sale'}/${slug}_rb/" target="_blank" class="small">Optional: open Zillow search for ${esc(name)}</a>`}
@@ -357,7 +421,7 @@ function openPoint(lon,lat,listing,pin){
  const tok=++sheetToken;const L=listing||{};curCtx={lon,lat,name:pin?pin.name:listing?(L.formattedAddress||'Listing'):`Spot ${lat.toFixed(4)},${lon.toFixed(4)}`,price:listing?L.price:null,acres:listing&&L.lotSize?L.lotSize/43560:null,listing:listing||null};recordHistory(lon,lat,curCtx.name,listing||null);if(exploreOn)exploreTo(lon,lat);
  const title=pin?esc(pin.name):listing?money(L.price)+(settings.mode==='rent'?'/mo':''):'Dropped point';
  let facts='';
- if(listing)facts=`<div>${esc(L.formattedAddress)}</div><div>${[L.propertyType,L.bedrooms!=null&&L.bedrooms+' bd',L.bathrooms!=null&&L.bathrooms+' ba',L.squareFootage&&L.squareFootage.toLocaleString()+' sq ft',L.lotSize&&('lot '+(L.lotSize/43560).toFixed(2)+' ac / '+L.lotSize.toLocaleString()+' sq ft'),L.yearBuilt&&'built '+L.yearBuilt].filter(Boolean).join(' · ')}</div><div class="src">Listing via RentCast${L.mlsName?' / '+esc(L.mlsName):''}${L.daysOnMarket!=null?' · '+L.daysOnMarket+' days on market':''}</div><div><span class="badge">${PTYPES[classify(L)]} ${classify(L)}</span></div><h3>💰 Deal</h3>${dealHTML(L)}`;
+ if(listing)facts=`<div>${esc(L.formattedAddress)}</div><div>${[L.propertyType,L.bedrooms!=null&&L.bedrooms+' bd',L.bathrooms!=null&&L.bathrooms+' ba',L.squareFootage&&L.squareFootage.toLocaleString()+' sq ft',L.lotSize&&('lot '+(L.lotSize/43560).toFixed(2)+' ac / '+L.lotSize.toLocaleString()+' sq ft'),L.yearBuilt&&'built '+L.yearBuilt].filter(Boolean).join(' · ')}</div><div class="src">${(L.sources||[]).length>1?'Merged listing':'Listing via '+esc((L.sources||['RentCast'])[0])}${L.mlsName?' / '+esc(L.mlsName):''}${L.daysOnMarket!=null?' · '+L.daysOnMarket+' days on market':''}</div>${srcBadgeHTML(L)}<div><span class="badge">${PTYPES[classify(L)]} ${classify(L)}</span></div><h3>💰 Deal</h3>${dealHTML(L)}`;
  if(pin)facts=`<div><b style="color:${STATUS[pin.status]}">● ${esc(pin.status)}</b></div><div>${esc(pin.notes||'')}</div>${pin.link?`<a href="${esc(pin.link)}" target="_blank">Listing link</a>`:''}`;
  const ll=`${lat.toFixed(5)},${lon.toFixed(5)}`;
  showSheet(`<h2>${title}</h2>${facts}<div class="small">${ll} <span id="addr"></span></div>
@@ -415,7 +479,7 @@ async function loadUtil(lon,lat,L,live){
  const lf=L.features||{};const listed=[lf.waterSource&&'Water: '+lf.waterSource,lf.sewer&&'Sewer/septic: '+lf.sewer,lf.heating&&'Heating: '+lf.heating].filter(Boolean).join(' · ');
  const zq=encodeURIComponent(`${county} ${stName} zoning map GIS`),pq=encodeURIComponent(`${county} ${stName} planning and zoning department`);
  live(set)('util',`<b>⚡ Electricity</b>${elec}
- <b>🏠 Existing buildings</b><div>${L.squareFootage||L.propertyType?`Listing: ${esc(L.propertyType||'')} ${L.squareFootage?L.squareFootage.toLocaleString()+' sq ft':''} <span class="src">(RentCast)</span>`:'Listing data: unknown'}</div><div>${ov?`${bld.length} building footprint(s) mapped in OSM within 150 m`:'OSM footprints: unknown'} – check 🛰️ satellite view to confirm.</div><div class="src">OpenStreetMap building=*; imagery Esri</div>
+ <b>🏠 Existing buildings</b><div>${L.squareFootage||L.propertyType?`Listing: ${esc(L.propertyType||'')} ${L.squareFootage?L.squareFootage.toLocaleString()+' sq ft':''} <span class="src">(${esc((L.sources||['RentCast']).join(', '))})</span>`:'Listing data: unknown'}</div><div>${ov?`${bld.length} building footprint(s) mapped in OSM within 150 m`:'OSM footprints: unknown'} – check 🛰️ satellite view to confirm.</div><div class="src">OpenStreetMap building=*; imagery Esri</div>
  <b>💧 Wells & water</b><div>${listed?esc(listed)+' <span class="src">(listing)</span>':'Listing water/septic info: unknown'}</div><div>${wl}</div><div class="src">USGS NWIS groundwater sites. Private well logs are kept by state agencies – search “${esc(stName)} well log database”.</div>
  <b>📋 Zoning & permits</b><div>${L.zoning?'Listing zoning: '+esc(L.zoning):'Zoning: <b>unknown</b> – there is no free national zoning dataset. Check the county:'}</div>
  <div class="btns"><a target="_blank" href="https://www.google.com/search?q=${zq}">${esc(county||'County')} zoning/GIS map</a><a target="_blank" href="https://www.google.com/search?q=${pq}">Planning dept.</a></div><div class="src">County from OpenStreetMap Nominatim reverse geocode</div>`);
@@ -624,15 +688,15 @@ async function importData(t){let feats=[];
  renderPins();renderDrawings();openList()}
 
 /* ---------- settings ---------- */
-function status(){$('#rcKey').value=settings.rcKey||'';
- $('#status').innerHTML=`<div><b>RentCast listings:</b> ${settings.rcKey?'<span class="ok">key saved</span>':'<span class="bad">no key – no live pins</span>'}</div>
+function status(){$('#rcKey').value=settings.rcKey||'';renderSrcSettings();
+ $('#status').innerHTML=LISTING_SOURCES.map(s=>`<div><b>${esc(s.name)} listings:</b> ${s.key()?'<span class="ok">'+(s.id==='rentcast'?'key saved':'on, key saved')+'</span>':'<span class="bad">'+(s.id==='rentcast'?'no key':'off / no key')+' – no pins from this source</span>'}</div>`).join('')+`
  <div class="small">No key needed: map (OpenFreeMap/OSM), satellite (Esri), terrain (AWS Terrain Tiles), search (Photon/Nominatim), elevation (USGS EPQS), soil (USDA SDA), wildlife & fish (iNaturalist), water/power/buildings (OSM Overpass), wells (USGS NWIS), minerals (USGS MRDS).</div>
  <div>Network: ${navigator.onLine?'<span class="ok">online</span>':'<span class="bad">offline</span>'}</div>`}
-function diagHTML(){const d=hfDiag;return `<details id="diag"><summary>Diagnostics</summary><div class="small" style="word-break:break-all">MapLibre ${esc(d.ml)} · WebGL ${d.gl?'yes':'NO'} · ${esc(d.protocol)} ${esc(d.origin)}<br>Fallback: ${esc(d.fallback||'none')} · style timeout: ${d.styleTimeout} · context lost: ${d.contextLost}<br><b>Failed tiles</b>: ${d.failedTiles.map(esc).join('<br>')||'none'}<br><b>Last errors</b>: ${d.errors.map(esc).join('<br>')||'none'}<br>${esc(d.ua)}</div></details>`}
+function diagHTML(){const d=hfDiag;return `<details id="diag"><summary>Diagnostics</summary><div class="small" style="word-break:break-all">MapLibre ${esc(d.ml)} · WebGL ${d.gl?'yes':'NO'} · ${esc(d.protocol)} ${esc(d.origin)}<br>Fallback: ${esc(d.fallback||'none')} · style timeout: ${d.styleTimeout} · context lost: ${d.contextLost}<br><b>Failed tiles</b>: ${d.failedTiles.map(esc).join('<br>')||'none'}<br><b>Listing sources</b>: ${Object.values(srcDiag).map(x=>esc(x.name+': '+x.state+(x.n?' · '+x.n+' listings':'')+(x.err?' · '+x.err:''))).join('<br>')||'not queried yet'}<br><b>Last errors</b>: ${d.errors.map(esc).join('<br>')||'none'}<br>${esc(d.ua)}</div></details>`}
 $('#btnSettings').onclick=()=>{status();$('#status').insertAdjacentHTML('beforeend',diagHTML());renderList();$('#settings').classList.remove('hidden')};
 $('#optLink').innerHTML=(()=>{const s=STATES.find(x=>x[0]===settings.state);return s?searchLinks(s[1],settings.mode):''})();
 $('#closeSettings').onclick=()=>$('#settings').classList.add('hidden');
-$('#saveSettings').onclick=()=>{settings.rcKey=$('#rcKey').value.trim();saveSettings();saleVis();status();refreshListings(true)};
+$('#saveSettings').onclick=()=>{settings.rcKey=$('#rcKey').value.trim();LISTING_SOURCES.forEach(s=>{if(s.id==='rentcast')return;const on=$(`[data-src-on="${s.id}"]`),k=$(`[data-src-key="${s.id}"]`);if(!on||!k)return;settings.src[s.id]={on:on.checked,key:k.value.trim()}});saveSettings();saleVis();status();refreshListings(true)};
 $('#clearCache').onclick=async()=>{await DB.clear('cache').catch(()=>{});status();refreshListings(true)};
 const net=()=>$('#offline').classList.toggle('hidden',navigator.onLine);addEventListener('online',net);addEventListener('offline',net);net();
 map.on('error',e=>{if(!navigator.onLine)net()});
@@ -906,7 +970,7 @@ function openLayers(){let d=$('#layers');if(d)d.remove();d=document.createElemen
  const card=(id,label,th,on)=>`<div class="lcard ${on?'on':''}" data-l="${id}"><div class="th" style="${th}"></div>${label}</div>`;
  d.innerHTML=`<div class="panel"><b style="font-size:18px">Map Layers</b><button id="layersClose" style="float:right;border:0;background:#2e353b;color:#fff;border-radius:50%;width:30px;height:30px">✕</button>
  <h4>Basemap</h4><div class="lgrid">${card('street','Street','background:linear-gradient(135deg,#f3efe6,#dfe9d8);',!satOn)}${card('hybrid','Hybrid','background:linear-gradient(135deg,#3b4a2c,#6d7a4d);',satOn)}${card('topo','Topo overlay','background:repeating-radial-gradient(circle,#e9e1c9 0 6px,#b8a77a 7px 8px);',topoOn)}</div>
- <h4>Hunting</h4><div class="lgrid">${card('game','Wild Game & Fish','background:#4a3416;font-size:26px;" data-i="🦌',gameOn)}${settings.rcKey?card('sale','For Sale','background:#3d2a12;" data-i="🏷️',saleOn):''}${card('trails','Trails & backroads','background:#2b2117;" data-i="🥾',trailsOn)}</div>
+ <h4>Hunting</h4><div class="lgrid">${card('game','Wild Game & Fish','background:#4a3416;font-size:26px;" data-i="🦌',gameOn)}${anySource()?card('sale','For Sale','background:#3d2a12;" data-i="🏷️',saleOn):''}${card('trails','Trails & backroads','background:#2b2117;" data-i="🥾',trailsOn)}</div>
  <h4>View</h4><div class="lgrid">${card('3d','3D terrain','background:#22303a;" data-i="⛰️',terrainOn)}${card('explore','Explore orbit','background:#22303a;" data-i="🎥',exploreOn)}</div></div>`;
  d.querySelectorAll('.th[data-i]').forEach(t=>t.textContent=t.dataset.i);
  document.body.appendChild(d);d.onclick=e=>{if(e.target===d)d.remove()};$('#layersClose').onclick=()=>d.remove();
@@ -943,19 +1007,19 @@ async function fetchAvm(l){const k=l.id||l.formattedAddress;const c=avmCache[k];
  avmCache[k]={price:j&&j.price||null,lo:j&&j.priceRangeLow,hi:j&&j.priceRangeHigh,t:Date.now()};localStorage.setItem('hf-avm',JSON.stringify(avmCache));return avmCache[k]}
 function dealHTML(l){const D=dealInfo(l);return `<div id="dealBox"><div style="font-size:20px;font-weight:700">${D.score==null?'Deal score: not enough data':'Deal score '+D.score+'/100'}</div>
  <div>${D.badges.map(b=>`<span class="badge">${esc(b)}</span>`).join('')}</div><ul class="small">${D.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
- ${settings.rcKey&&!avmCache[l.id||l.formattedAddress]?`<div class="btns"><button id="avmBtn">Get value estimate (1 API call)</button></div>`:''}<div class="src">Computed from RentCast listings in view; comps are active listings, not sales.</div></div>`}
+ ${settings.rcKey&&!avmCache[l.id||l.formattedAddress]?`<div class="btns"><button id="avmBtn">Get value estimate (1 API call)</button></div>`:''}<div class="src">Computed from live listings in view; comps are active listings, not sales.</div></div>`}
 function wireDeal(l){const b=$('#avmBtn');if(b)b.onclick=async()=>{b.textContent='Fetching…';try{await fetchAvm(l);$('#dealBox').outerHTML=dealHTML(l);wireDeal(l);renderSalePins()}catch(e){b.textContent='Value estimate unavailable ('+e.message+')'}}}
 const listingMk=new Map();
 function renderSalePins(){if(!saleOn){syncMarkers(listingMk,new Map());listingMarkers=[];return 0}const mode=settings.mode||'sale';
  saleList.forEach(l=>{l._type=classify(l);l._deal=dealInfo(l)});
  const shown=saleList.filter(l=>(typeFilter==='All'||l._type===typeFilter)&&(!dealsOnly||(l._deal.score!=null&&l._deal.score>=60)));const W=new Map();
- shown.forEach(l=>{const isDeal=l._deal.score!=null&&l._deal.score>=60;const inner=`<div class="pricepin">${PTYPES[l._type]||''} ${short$(l.price||0)}${mode==='rent'?'/mo':''}</div><div class="lstem"></div><div class="ldot"></div>`;
+ shown.forEach(l=>{const isDeal=l._deal.score!=null&&l._deal.score>=60;const ns=(l.sources||[]).length;const inner=`<div class="pricepin">${PTYPES[l._type]||''} ${short$(l.price||0)}${mode==='rent'?'/mo':''}${ns>1?`<span class="srcn" title="Listed on ${ns} sources">${ns}</span>`:''}</div><div class="lstem"></div><div class="ldot"></div>`;
   W.set((l.id||l.formattedAddress||l.latitude+','+l.longitude)+'|'+mode,{l,isDeal,inner,sig:inner+isDeal+l._type})});
  syncMarkers(listingMk,W,w=>{const el=document.createElement('div');el.className='lpin'+(w.isDeal?' deal':'');el.dataset.type=w.l._type;el.innerHTML=w.inner;
   el.onclick=ev=>{ev.stopPropagation();openPoint(w.l.longitude,w.l.latitude,w.l)};return new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([w.l.longitude,w.l.latitude]).addTo(map)});
  listingMarkers=[...listingMk.values()];renderChips();scheduleDeclutter();return shown.length}
 function renderChips(){let c=$('#chips');if(!c){c=document.createElement('div');c.id='chips';document.body.appendChild(c)}
- c.classList.toggle('hidden',!saleOn||!settings.rcKey);
+ c.classList.toggle('hidden',!saleOn||!anySource());
  c.innerHTML=`<button data-chip="deals" class="${dealsOnly?'on':''}" id="btnDeals">💰 Deals only</button><button id="btnDealList">📊 Deals list</button>`+['All',...Object.keys(PTYPES)].map(t=>`<button data-chip="${t}" class="${typeFilter===t?'on':''}">${PTYPES[t]||''} ${t}</button>`).join('');
  c.querySelectorAll('[data-chip]').forEach(b=>b.onclick=()=>{if(b.dataset.chip==='deals'){dealsOnly=!dealsOnly;settings.dealsOnly=dealsOnly}else{typeFilter=b.dataset.chip;settings.typeFilter=typeFilter}saveSettings();renderSalePins()});
  $('#btnDealList').onclick=()=>openDeals('score')}
@@ -1029,9 +1093,18 @@ map.on('load',()=>setTimeout(applyTheme,50));applyTheme();
 function setTheme(v){settings.theme=v;saveSettings();applyTheme()}
 (()=>{const p=$('#settings .panel');if(p&&!$('#sTheme')){p.insertAdjacentHTML('afterbegin',`<label>Appearance <select id="sTheme" data-theme-sel style="padding:8px;font-size:16px"><option value="auto">Auto (system)</option><option value="dark">Dark</option><option value="light">Light</option></select></label>`);$('#sTheme').value=settings.theme;$('#sTheme').onchange=e=>setTheme(e.target.value)}})();
 
+/* ---- listing-source UI helpers ---- */
+function srcBadgeHTML(L){const S=L.sources||[];if(!S.length)return '';const pr=L.prices||{};const multi=S.length>1;
+ const diff=multi&&L.priceDiff?`<div class="small">⚠️ Price differs between sources: ${S.filter(n=>pr[n]).map(n=>esc(n)+' '+money(pr[n])).join(' · ')}</div>`:(multi?'<div class="small">Same price on all sources.</div>':'');
+ const links=Object.entries(L.urls||{}).filter(([,u])=>/^https:\/\//.test(u)).map(([n,u])=>`<a class="vlink" href="${esc(u)}" target="_blank" rel="noopener noreferrer">View original listing (${esc(n)})</a>`).join(' ');
+ return `<div class="srcbox"><span class="badge srcb">Listed on: ${S.map(esc).join(', ')}</span>${diff}${links?'<div>'+links+'</div>':''}</div>`}
+const UNAVAILABLE_SOURCES='Zillow, Realtor.com and Redfin have no public listings API (Zillow’s API was retired in 2021; its Bridge MLS feed is invite-only for MLS-approved brokers/vendors). PropStream and Propwire offer no public API, and their terms forbid automated copying – so they are not used. The same MLS listings reach this app through RentCast (and BatchData if you subscribe).';
+function renderSrcSettings(){let box=$('#srcSettings');if(!box){const p=$('#rcKey')&&$('#rcKey').closest('label');if(!p)return;box=document.createElement('div');box.id='srcSettings';const after=$('#optLink')||p;after.insertAdjacentElement('afterend',box)}
+ box.innerHTML='<h3>More listing sources</h3>'+LISTING_SOURCES.filter(s=>s.id!=='rentcast').map(s=>{const c=settings.src[s.id]||{};return `<div class="srcrow"><label class="chk"><input type="checkbox" data-src-on="${s.id}" ${c.on?'checked':''}> ${esc(s.name)}</label><input data-src-key="${s.id}" type="password" placeholder="paste ${esc(s.name)} key" value="${esc(c.key||'')}"><p class="small">${esc(s.howTo)}</p></div>`}).join('')+`<details class="small"><summary>Why not Zillow / Redfin / Realtor.com / PropStream / Propwire?</summary>${esc(UNAVAILABLE_SOURCES)}</details><p class="small">Duplicates (same address, or within ~30 m with similar price/acreage) are merged into one pin showing every source.</p>`}
+
 /* ================= Home screen ================= */
 settings.landGame=settings.landGame!==false;settings.fish=settings.fish!==false;
-function showHome(){let h=$('#home');if(h)h.remove();h=document.createElement('div');h.id='home';const key=!!settings.rcKey;
+function showHome(){let h=$('#home');if(h)h.remove();h=document.createElement('div');h.id='home';const key=anySource();
  h.innerHTML=`<div class="hwrap"><div class="hlogo">🏕 Homestead Finder</div>
  <h1>Know the land before you drive out.</h1>
  <p class="hlead"><b>The Getaway Report</b> scores any spot for a hunting getaway in seconds: public land, verified game & fish, water, access, flood, power – weighted by <b>your</b> priorities.</p>
@@ -1051,7 +1124,7 @@ function showHome(){let h=$('#home');if(h)h.remove();h=document.createElement('d
  $('#hTheme').onchange=e=>setTheme(e.target.value);
  const save=()=>{settings.state=$('#hState').value;settings.mode=$('#hMode').value;const hl=$('#hLand').checked,hf=$('#hFish').checked;gameOn=hl||hf;if(gameOn){settings.landGame=hl;settings.fish=hf}else{settings.landGame=true;settings.fish=true}
  settings.game=gameOn;if(key){saleOn=$('#hSale').checked||$('#hDeals').checked;settings.sale=saleOn;dealsOnly=$('#hDeals').checked;settings.dealsOnly=dealsOnly}
-  typeFilter=ht;settings.typeFilter=ht;saveSettings();DB.put('cache',{id:'home-selections',t:Date.now(),data:{...settings,rcKey:undefined}}).catch(()=>{})};
+  typeFilter=ht;settings.typeFilter=ht;saveSettings();DB.put('cache',{id:'home-selections',t:Date.now(),data:{...settings,rcKey:undefined,src:undefined}}).catch(()=>{})};
  const go=()=>{save();h.remove();$('#state').value=settings.state;$('#mode').value=settings.mode;$('#btnGame').classList.toggle('on',gameOn);$('#btnSale').classList.toggle('on',saleOn);
   const s=STATES.find(x=>x[0]===settings.state);if(s)map.jumpTo({center:[s[3],s[2]],zoom:Math.max(s[4],8.2),pitch:0});
   setTimeout(()=>{refreshListings();updateGame();renderSalePins()},300)};
